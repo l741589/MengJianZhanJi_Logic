@@ -26,7 +26,7 @@ namespace Assets.Net {
             isRunning = true;
             while (isRunning) {
                 try {
-                    Data.RequestHeader header = NetHelper.Receive<Data.RequestHeader>(Sock);
+                    Data.RequestHeader header = NetHelper.Recv<Data.RequestHeader>(Sock);
                     Debug.Log(header.ToString());
                     RequestHandler a;
                     if (requestDispatcher.TryGetValue(header.Type, out a)) {
@@ -62,16 +62,14 @@ namespace Assets.Net {
             requestDispatcher[type] = handler;
         }
 
-        public T Receive<T>() {
-            return NetHelper.Receive<T>(Sock);
+        public T Recv<T>() {
+            return NetHelper.Recv<T>(Sock);
         }
 
         /////////////////////////////////////////////
 
         static void InitHanlders() {
-            RegisterHandler("NewCards", (c, h) => {
-                c.Receive<>
-            });
+            
         }
     }
 }

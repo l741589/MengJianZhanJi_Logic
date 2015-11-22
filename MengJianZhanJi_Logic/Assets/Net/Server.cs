@@ -32,6 +32,8 @@ namespace Assets.Net {
             Close();
         }
 
+        
+
         public void Close(){
             state = -1;
             foreach (var e in clients) e.Sock.Close();
@@ -69,10 +71,21 @@ namespace Assets.Net {
             public Socket Sock { get { return Client.Client; } }
             public ClientHandler(TcpClient client) {
                 this.Client = client;
-                this.ClientInfo = NetHelper.Receive<Data.ClientInfo>(Sock);
+                this.ClientInfo = NetHelper.Recv<Data.ClientInfo>(Sock);
                 Client.ReceiveTimeout = 30000;
                 Client.SendTimeout = 5000;
                 Debug.Log(this.ClientInfo.Name + " joined");
+            }
+
+            public Data.ResponseHeader Request(String type, params object[] objs) {
+                Data.ResponseHeader h = new Data.ResponseHeader() { Count = objs.Length, Type = type };
+                NetHelper.Send(Sock, h);
+                foreach (var obj in objs) NetHelper.Send(Sock,obj);
+                return Recv<Data.ResponseHeader>();                
+            }
+
+            public T Recv<T>() {
+                return NetHelper.Recv<T>(Sock);
             }
         }
     }

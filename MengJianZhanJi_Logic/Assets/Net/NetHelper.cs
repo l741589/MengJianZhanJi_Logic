@@ -15,10 +15,6 @@ namespace Assets.Net {
         static private Server server;
         static private Client client;
 
-        static public void Request(object obj) {
-
-        }
-
         static public void SetUpServer() {
             if (server!=null) return;
             server = new Server(() => {
@@ -50,40 +46,40 @@ namespace Assets.Net {
             }
         }
 
-        static public void Receive(Socket sock, int len, Action<byte[]> a) {
+        static public void Recv(Socket sock, int len, Action<byte[]> a) {
             byte[] buf = new byte[len];
-            Receive(sock, buf, 0, len, a);
+            Recv(sock, buf, 0, len, a);
         }
 
-        private static int Receive(Socket sock, byte[] buf, int start, int length, Action<byte[]> a) {
+        private static int Recv(Socket sock, byte[] buf, int start, int length, Action<byte[]> a) {
             sock.BeginReceive(buf, start, length, SocketFlags.None, ar => {
                 int len = sock.EndReceive(ar);
                 if (len == -1) a(null);
                 else if (length == len) a(buf);
-                else if (len < length) start = Receive(sock, buf, start + len, length - len, a);
+                else if (len < length) start = Recv(sock, buf, start + len, length - len, a);
             }, null);
             return start;
         }
 
-        public static void ReceiveInt(Socket sock,Action<int> a) {
-            Receive(sock, 4, bs => a(BitConverter.ToInt32(bs,0)));
+        public static void RecvInt(Socket sock,Action<int> a) {
+            Recv(sock, 4, bs => a(BitConverter.ToInt32(bs,0)));
         }
 
-        public static void ReceiveWithLen(Socket sock, Action<byte[]> a) {
-            ReceiveInt(sock, len => Receive(sock, len, bs => a(bs)));
+        public static void RecvWithLen(Socket sock, Action<byte[]> a) {
+            RecvInt(sock, len => Recv(sock, len, bs => a(bs)));
         }
 
-        public static void ReceiveString(Socket sock, Action<String> a) {
-            ReceiveWithLen(sock, bs => a(Encoding.UTF8.GetString(bs)));
+        public static void RecvString(Socket sock, Action<String> a) {
+            RecvWithLen(sock, bs => a(Encoding.UTF8.GetString(bs)));
         }
 
-        public static void ReceiveProtoBuf<T>(Socket sock, Action<T> a) {
-            ReceiveWithLen(sock, bs => a(Serializer.Deserialize<T>(new MemoryStream(bs))));
+        public static void RecvProtoBuf<T>(Socket sock, Action<T> a) {
+            RecvWithLen(sock, bs => a(Serializer.Deserialize<T>(new MemoryStream(bs))));
         }
-        public static void Receive<T>(Socket sock, Action<T> a) {
-            ReceiveProtoBuf<T>(sock, a);
+        public static void Recv<T>(Socket sock, Action<T> a) {
+            RecvProtoBuf<T>(sock, a);
         }
-        static public byte[] Receive(Socket sock, int length) {
+        static public byte[] Recv(Socket sock, int length) {
             byte[] bs = new byte[length];
             int start = 0;
             while (start < length) {
@@ -93,23 +89,23 @@ namespace Assets.Net {
             return bs;
         }
 
-        static public int ReceiveInt(Socket sock) {
-            return BitConverter.ToInt32(Receive(sock, 4),0);
+        static public int RecvInt(Socket sock) {
+            return BitConverter.ToInt32(Recv(sock, 4),0);
         }
 
-        static public byte[] ReceiveWithLen(Socket sock) {
-            return Receive(sock, ReceiveInt(sock));
+        static public byte[] RecvWithLen(Socket sock) {
+            return Recv(sock, RecvInt(sock));
         }
 
-        static public string ReceiveString(Socket sock) {
-            return Encoding.UTF8.GetString(ReceiveWithLen(sock));
+        static public string RecvString(Socket sock) {
+            return Encoding.UTF8.GetString(RecvWithLen(sock));
         }
 
-        static public T ReceiveProtoBuf<T>(Socket sock){
-            return Serializer.Deserialize<T>(new MemoryStream(ReceiveWithLen(sock)));
+        static public T RecvProtoBuf<T>(Socket sock){
+            return Serializer.Deserialize<T>(new MemoryStream(RecvWithLen(sock)));
         }
-        public static T Receive<T>(Socket sock) {
-            return ReceiveProtoBuf<T>(sock);
+        public static T Recv<T>(Socket sock) {
+            return RecvProtoBuf<T>(sock);
         }
 
         public static void Send(Socket sock, byte[] data,Action a) {
