@@ -58,6 +58,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Assets\Net\Data\GameData.cs" />
     <Compile Include="UnityEngine\Debug.cs" />
     <Compile Include="UnityEngine\Loom.cs" />
     <Compile Include="UnityEngine\MonoBehaviour.cs" />
