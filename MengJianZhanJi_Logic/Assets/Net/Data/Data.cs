@@ -30,6 +30,20 @@ namespace Assets.Net.Data {
     }
 
     [ProtoContract]
+    public class IntList {
+        [ProtoMember(1)]
+        public List<int> List;
+
+        public IntList() {
+
+        }
+
+        public IntList(IEnumerable<int> intlist) {
+            List = new List<int>(intlist);
+        }
+    }
+
+    [ProtoContract]
     public class Map {
         private List<KeyValuePair> value = new List<KeyValuePair>();
 
@@ -53,7 +67,7 @@ namespace Assets.Net.Data {
         private bool valueUpdated = false;
         private bool mapUpdated = false;
 
-        String this[String key]{
+        public String this[String key]{
             get {
                 if (valueUpdated){
                     cachedMap.Clear();
@@ -85,7 +99,7 @@ namespace Assets.Net.Data {
         public int Count { get; set; }
 
         public override string ToString() {
-            return Type + "?" + Args;
+            return "Request: "+ Type +":"+Count+"?" + Args;
         }
     }
 
@@ -95,5 +109,9 @@ namespace Assets.Net.Data {
         public string Type { get; set; }
         [ProtoMember(3)]
         public int Count { get; set; }
+
+        public override string ToString() {
+            return "Response: " + Type + ":" + Count;
+        }
     }
 }

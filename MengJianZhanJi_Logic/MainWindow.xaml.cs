@@ -35,5 +35,9 @@ namespace MengJianZhanJi_Logic {
         private void Button_Click_2(object sender, RoutedEventArgs e) {
             NetHelper.Join("127.0.0.1", new Assets.Net.Data.ClientInfo { Name="User"});
         }
+
+        private void Button_Click_3(object sender, RoutedEventArgs e) {
+            NetHelper.Start();
+        }
     }
 }

@@ -6,5 +6,6 @@
         <Button Click="Button_Click">Setup Server</Button>
         <Button Click="Button_Click_1">Shutdown</Button>
         <Button Click="Button_Click_2">Join</Button>
+        <Button Click="Button_Click_3">Start</Button>
     </StackPanel>
 </Window>

@@ -58,7 +58,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Assets\Net\Data\GameData.cs" />
+    <Compile Include="Assets\GameLogic\GameLogic.cs" />
+    <Compile Include="Assets\GameLogic\Status.cs" />
+    <Compile Include="Assets\Net\Data\Protocol.cs" />
+    <Compile Include="Assets\Net\Message.cs" />
     <Compile Include="UnityEngine\Debug.cs" />
     <Compile Include="UnityEngine\Loom.cs" />
     <Compile Include="UnityEngine\MonoBehaviour.cs" />

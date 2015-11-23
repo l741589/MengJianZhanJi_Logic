@@ -11,8 +11,10 @@ namespace UnityEngine {
     public static class Loom {
         public static MainWindow Window { get; set; }
 
-        public static void RunAsync(Action a) {
-            new Thread(()=>a()).Start();
+        public static Thread RunAsync(Action a) {
+            var t = new Thread(() => a());
+            t.Start();
+            return t;
         }
 
         public static void QueueOnMainThread(Action a) {

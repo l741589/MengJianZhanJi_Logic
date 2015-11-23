@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 
 namespace Assets.Net {
@@ -14,6 +15,7 @@ namespace Assets.Net {
 
         static private Server server;
         static private Client client;
+        static private Thread clientThread;
 
         static public void SetUpServer() {
             if (server!=null) return;
@@ -24,7 +26,7 @@ namespace Assets.Net {
 
         static public void Join(String addr,Data.ClientInfo info) {
             if (client != null) return;
-            Loom.RunAsync(() => {
+            clientThread=Loom.RunAsync(() => {
                 try { 
                     client = new Client(addr,info);
                     client.Loop();
@@ -44,6 +46,13 @@ namespace Assets.Net {
                 client.Close();
                 client = null;
             }
+            if (clientThread != null) {
+                clientThread.Interrupt();
+            }
+        }
+
+        internal static void Start() {
+            if (server!=null) server.Start();
         }
 
         static public void Recv(Socket sock, int len, Action<byte[]> a) {

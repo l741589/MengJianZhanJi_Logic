@@ -9,12 +9,12 @@ using UnityEngine;
 
 namespace Assets.Net {
 
-
-    class Server {
+    public class Server {
         private TcpListener listener;
         private List<ClientHandler> clients=new List<ClientHandler>();
         private Action onServerStarted;
-        private int state=0;        
+        private int state=0;   
+        public int State { get { return state; } }     
 
         public Server(Action onStarted) {
             this.onServerStarted = onStarted;
@@ -31,8 +31,6 @@ namespace Assets.Net {
         ~Server() {
             Close();
         }
-
-        
 
         public void Close(){
             state = -1;
@@ -64,29 +62,42 @@ namespace Assets.Net {
         }
 
 
-        class ClientHandler {
-            
-            public Data.ClientInfo ClientInfo { get; set; }
-            public TcpClient Client { get; private set; }
-            public Socket Sock { get { return Client.Client; } }
-            public ClientHandler(TcpClient client) {
-                this.Client = client;
-                this.ClientInfo = NetHelper.Recv<Data.ClientInfo>(Sock);
-                Client.ReceiveTimeout = 30000;
-                Client.SendTimeout = 5000;
-                Debug.Log(this.ClientInfo.Name + " joined");
-            }
+        public MessageContext Request(ClientHandler client,String type, params object[] objs) {
+            var c = new MessageContext(client, type, objs);
+            Request(c);
+            return c;
+        }
 
-            public Data.ResponseHeader Request(String type, params object[] objs) {
-                Data.ResponseHeader h = new Data.ResponseHeader() { Count = objs.Length, Type = type };
-                NetHelper.Send(Sock, h);
-                foreach (var obj in objs) NetHelper.Send(Sock,obj);
-                return Recv<Data.ResponseHeader>();                
-            }
+        public void Broadcast(ClientHandler[] clients,String type, params object[] objs) {
+            int len = clients.Length;
+            MessageContext[] cs = new MessageContext[len];
+            for (int i = 0; i < len; ++i) cs[i] = new MessageContext(clients[i], type, objs);
+            Request(cs);
+        }
 
-            public T Recv<T>() {
-                return NetHelper.Recv<T>(Sock);
+        public void Request(params MessageContext[] contexts) {
+            foreach (var e in contexts) {
+                e.request = new Data.RequestHeader() { Count = e.requestBody.Length, Type = e.type };
+                NetHelper.Send(e.client.Sock, e.request);
+                foreach (var obj in e.requestBody) NetHelper.Send(e.client.Sock, obj);
+            }
+            foreach (var e in contexts) {
+                e.response = NetHelper.Recv<Data.ResponseHeader>(e.client.Sock);
+                Debug.Log("("+e.client.ClientInfo.Name+')'+e.response.ToString());
+                if (e.handler != null) e.handler(e);
             }
         }
+
+        public void Start() {
+            state = 1;
+            Loom.RunAsync(() => {
+                try {
+                    GameLogic.MainLogic logic = new GameLogic.MainLogic(this);
+                    logic.Start(clients.ToArray());
+                }catch(SocketException e) {
+                    Debug.LogError(e.Message);
+                }
+            });
+        }       
     }
 }
