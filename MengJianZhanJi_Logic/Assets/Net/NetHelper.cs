@@ -1,4 +1,5 @@
-﻿using ProtoBuf;
+﻿using Assets.Util;
+using ProtoBuf;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -31,7 +32,7 @@ namespace Assets.Net {
                     client = new Client(addr,info);
                     client.Loop();
                 } catch(Exception e) {
-                    Debug.Log("Client Crashed:"+e);
+                    LogUtils.LogClient("Client Crashed:"+e);
                     client = null;
                 }
             });

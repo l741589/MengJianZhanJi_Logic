@@ -4,19 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Assets.Net.Data {
-    [ProtoContract]
-    public class ClientInfo {
-        [ProtoMember(1)]
-        public int Version { get; set; }
-        [ProtoMember(2)]
-        public String Name { get; set; }
-
-        public ClientInfo() {
-            Version = 0x01000000;
-        }
-    }
-
+namespace Assets.Data {
     [ProtoContract]
     public class KeyValuePair {
         [ProtoMember(1)]
@@ -30,16 +18,36 @@ namespace Assets.Net.Data {
     }
 
     [ProtoContract]
-    public class IntList {
+    public class ListAdapter<T> {
         [ProtoMember(1)]
-        public List<int> List;
+        public List<T> List;
 
-        public IntList() {
+        public ListAdapter() {}
+
+        public ListAdapter(IEnumerable<T> list) {
+            List = new List<T>(list);
+        }
+    }
+
+    [ProtoContract]
+    public class TypeAdapter<T> {
+        [ProtoMember(1)]
+        public T Value;
+
+        public static implicit operator TypeAdapter<T>(T val) {
+            return new TypeAdapter<T>(val);
+        }
+
+        public static implicit operator T(TypeAdapter<T> val) {
+            return val.Value;
+        }
+
+        public TypeAdapter() {
 
         }
 
-        public IntList(IEnumerable<int> intlist) {
-            List = new List<int>(intlist);
+        public TypeAdapter(T val) {
+            Value = val;
         }
     }
 
@@ -55,21 +63,22 @@ namespace Assets.Net.Data {
                     foreach (var p in cachedMap) value.Add(new KeyValuePair { Key = p.Key, Value = p.Value });
                     mapUpdated = false;
                 }
-                return value; 
+                return value;
             }
-            set { 
+            set {
                 this.value = value;
                 valueUpdated = true;
             }
         }
 
+
         private Dictionary<String, String> cachedMap = new Dictionary<string, string>();
         private bool valueUpdated = false;
         private bool mapUpdated = false;
 
-        public String this[String key]{
+        public String this[String key] {
             get {
-                if (valueUpdated){
+                if (valueUpdated) {
                     cachedMap.Clear();
                     foreach (var p in Value) cachedMap.Add(p.Key, p.Value);
                     valueUpdated = false;
@@ -85,33 +94,7 @@ namespace Assets.Net.Data {
         }
 
         public override string ToString() {
-            return "{"+String.Join(", ", Value)+"}";
-        }
-    }
-
-    [ProtoContract]
-    public class RequestHeader {
-        [ProtoMember(1)]
-        public string Type { get; set; }
-        [ProtoMember(2)]
-        public Map Args { get; set; }
-        [ProtoMember(3)]
-        public int Count { get; set; }
-
-        public override string ToString() {
-            return "Request: "+ Type +":"+Count+"?" + Args;
-        }
-    }
-
-    [ProtoContract]
-    public class ResponseHeader {
-        [ProtoMember(1)]
-        public string Type { get; set; }
-        [ProtoMember(3)]
-        public int Count { get; set; }
-
-        public override string ToString() {
-            return "Response: " + Type + ":" + Count;
+            return "{" + String.Join(", ", Value) + "}";
         }
     }
 }

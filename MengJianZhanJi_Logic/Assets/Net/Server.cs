@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Assets.Util;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -22,7 +23,7 @@ namespace Assets.Net {
                 try {
                     Work();
                 } catch (Exception e) {
-                    Debug.LogError("Server Crashed:" + e);
+                    LogUtils.LogServer("Server Crashed:" + e);
                     listener = null;
                 }
             });          
@@ -39,7 +40,7 @@ namespace Assets.Net {
                 listener.Server.Close();
                 listener.Stop();
             }
-            Debug.Log("Server Shutdown");
+            LogUtils.LogServer("Server Shutdown");
         }
 
         private void Work() {
@@ -47,18 +48,18 @@ namespace Assets.Net {
             listener = new TcpListener(IPAddress.Any, NetHelper.Port);
             listener.Server.SendTimeout=listener.Server.ReceiveTimeout = 5000;
             listener.Start();
-            
-            Debug.Log("Server Started");
+
+            LogUtils.LogServer("Server Started");
             if (onServerStarted!=null) Loom.QueueOnMainThread(onServerStarted);
             while (state==0) {
                 try { 
                     TcpClient client = listener.AcceptTcpClient();
                     clients.Add(new ClientHandler(client));
                 } catch (SocketException e) {
-                    Debug.LogError("Listen:"+e.Message);
+                    LogUtils.LogServer("Listen:"+e.Message);
                 }
             }
-            Debug.Log("Server WorkThread Finish");
+            LogUtils.LogServer("Server WorkThread Finish");
         }
 
 
@@ -83,7 +84,7 @@ namespace Assets.Net {
             }
             foreach (var e in contexts) {
                 e.response = NetHelper.Recv<Data.ResponseHeader>(e.client.Sock);
-                Debug.Log("("+e.client.ClientInfo.Name+')'+e.response.ToString());
+                LogUtils.LogServer(e.client+e.response.ToString());
                 if (e.handler != null) e.handler(e);
             }
         }
@@ -95,7 +96,7 @@ namespace Assets.Net {
                     GameLogic.MainLogic logic = new GameLogic.MainLogic(this);
                     logic.Start(clients.ToArray());
                 }catch(SocketException e) {
-                    Debug.LogError(e.Message);
+                    LogUtils.LogServer(e.Message);
                 }
             });
         }       

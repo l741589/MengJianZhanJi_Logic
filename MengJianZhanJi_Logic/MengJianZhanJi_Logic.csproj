@@ -58,10 +58,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Assets\Data\BaseType.cs" />
+    <Compile Include="Assets\Data\G.cs" />
     <Compile Include="Assets\GameLogic\GameLogic.cs" />
     <Compile Include="Assets\GameLogic\Status.cs" />
-    <Compile Include="Assets\Net\Data\Protocol.cs" />
+    <Compile Include="Assets\Data\Protocol.cs" />
     <Compile Include="Assets\Net\Message.cs" />
+    <Compile Include="Assets\Util\IOUtils.cs" />
+    <Compile Include="Assets\Util\LogUtils.cs" />
     <Compile Include="UnityEngine\Debug.cs" />
     <Compile Include="UnityEngine\Loom.cs" />
     <Compile Include="UnityEngine\MonoBehaviour.cs" />
@@ -74,7 +78,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Assets\Net\Client.cs" />
-    <Compile Include="Assets\Net\Data\Data.cs" />
+    <Compile Include="Assets\Data\Data.cs" />
     <Compile Include="Assets\Net\NetHelper.cs" />
     <Compile Include="Assets\Net\Server.cs" />
     <Compile Include="MainWindow.xaml.cs">
@@ -100,6 +104,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="Assets\CardInfo.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -112,9 +119,7 @@
   <ItemGroup>
     <Content Include="protobuf-net.dll" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Assets\Util\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

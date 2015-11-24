@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Assets.Util;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -38,12 +39,21 @@ namespace Assets.Net {
         public Data.ClientInfo ClientInfo { get; set; }
         public TcpClient Client { get; private set; }
         public Socket Sock { get { return Client.Client; } }
+        public int Index { get; set; }
         public ClientHandler(TcpClient client) {
             this.Client = client;
             this.ClientInfo = NetHelper.Recv<Data.ClientInfo>(Sock);
             Client.ReceiveTimeout = 30000;
             Client.SendTimeout = 5000;
-            Debug.Log(this.ClientInfo.Name + " joined");
+            LogUtils.LogServer(this.ClientInfo.Name + " joined");
+        }
+
+        public T Recv<T>() {
+            return NetHelper.Recv<T>(Sock);
+        }
+
+        public override string ToString() {
+            return ClientInfo.ToString();
         }
     }
 }

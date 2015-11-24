@@ -1,4 +1,6 @@
-﻿using ProtoBuf;
+﻿using Assets.Data;
+using Assets.Util;
+using ProtoBuf;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -33,7 +35,7 @@ namespace Assets.Net {
             while (isRunning) {
                 try {
                     Data.RequestHeader header = NetHelper.Recv<Data.RequestHeader>(Sock);
-                    Debug.Log(header.ToString());
+                    LogUtils.LogClient(header.ToString());
                     RequestHandler a;
                     if (requestDispatcher.TryGetValue(header.Type, out a)) {
                         a(this, header);
@@ -45,10 +47,10 @@ namespace Assets.Net {
                         }
                     }
                 } catch (SocketException e) {
-                    Debug.LogError(e.GetType()+":"+e.Message);
+                    LogUtils.LogClient(e.GetType()+":"+e.Message);
                 }
             }
-            Debug.Log("Client Finished");
+            LogUtils.LogClient("Client Finished");
         }
         ~Client() {
             Close();
@@ -57,9 +59,9 @@ namespace Assets.Net {
             try {
                 isRunning = false;
                 TcpClient.Close();
-                Debug.Log("Client Shutdown");
+                LogUtils.LogClient("Client Shutdown");
             } catch (Exception e) {
-                Debug.LogError(e.Message);
+                LogUtils.LogClient(e.Message);
             }
         }
 
@@ -87,17 +89,38 @@ namespace Assets.Net {
             Event.Set();
         }
 
+        public override string ToString() {
+            return Info.ToString();
+        }
+
         /////////////////////////////////////////////
 
         static void InitHanlders() {
             RegisterHandler(Data.Types.GameStart, (c, r) => {
+                c.Info = c.Recv<Data.ClientInfo>();
+                Log(c, r, "GameStart,UserIndex:" + c.Info.Index);
                 c.Response();
             });
             RegisterHandler(Data.Types.PickRole, (c, r) => {
-                var l=c.Recv<Data.IntList>();
-                Debug.Log(String.Join(",", l.List));
+                var l=c.Recv<Data.ListAdapter<int>>();
+                Log(c,r,String.Join(",", l.List));
+                c.Response(new Data.TypeAdapter<int>(l.List.First()));
+            });
+            RegisterHandler(Data.Types.InitHandCards, (c, r) => {
+                var l = c.Recv<Data.ListAdapter<int>>();
+                Log(c,r,String.Join(",", l.List.Select(i=>G.Cards[i])));
                 c.Response();
             });
+
+            RegisterHandler(Data.Types.ChangeStage, (c, r) => {
+                var b = c.Recv<StageChangeInfo>();
+                Log(c, r,"Turn:"+b.Turn+"  Stage:"+b.Stage);
+                c.Response();
+            });
+        }
+
+        private static void Log(Client c,Data.RequestHeader r,String s) {
+            LogUtils.LogClient(c.ToString() + r.ToString() + " : " + s);
         }
     }
 }
