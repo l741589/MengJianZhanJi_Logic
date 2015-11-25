@@ -44,12 +44,18 @@ namespace MengJianZhanJi_Logic {
         }
 
         public void LogServer(string s) {
+            
             this.Dispatcher.Invoke(new Action(() => {
+                if (!tb_logServer.IsVisible) {
+                    tb_logServer.Visibility = Visibility.Visible;
+                    Grid.SetColumn(tb_logClient, 2);
+                    Grid.SetColumnSpan(tb_logClient, 1);
+                }
                 tb_logServer.AppendText(s + "\n");
             }));
         }
 
-        public void LogClient(string s) {
+        public void LogClient(string s) {            
             this.Dispatcher.Invoke(new Action(() => {
                 tb_logClient.AppendText(s + "\n");
             }));

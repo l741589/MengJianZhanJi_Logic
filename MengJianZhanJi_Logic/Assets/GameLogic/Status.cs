@@ -3,17 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Assets.Data;
+using ProtoBuf;
 
 namespace Assets.GameLogic {
-    public class UserStatus {
-        public int Role;
-        public int Index;
-        public int Camp;
-        public int Hp;
-        public readonly List<int> Cards = new List<int>();
-        public readonly List<int> Equip = new List<int>();
-        public readonly HashSet<int> Buff = new HashSet<int>();
-    }
 
     public class CardInfo {
         public int Id;
@@ -30,15 +22,18 @@ namespace Assets.GameLogic {
             if (Value != 0) ret += values[Value];
             return "[" + ret + "]";
         }
-    }    
+    }
 
+    [ProtoContract]
     public class Status {
         public readonly LinkedList<int> Stack = new LinkedList<int>();
         public readonly LinkedList<int> Roles = new LinkedList<int>();
-        public int ClientCount { get; set; }
+        
+        public int ClientCount { get; set; }        
         public UserStatus[] UserStatus;
-        private int turn;
-        public int Turn { get { return turn; } set { turn = value; if (turn >= ClientCount) turn = 0; } }
+        private int turn;        
+        public int Turn { get { return turn; } set { turn = value; if (turn >= ClientCount) turn = 0; } }        
         public RoundStage Stage;
+
     }
 }

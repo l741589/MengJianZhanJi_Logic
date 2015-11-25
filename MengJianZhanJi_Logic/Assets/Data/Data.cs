@@ -9,26 +9,25 @@ namespace Assets.Data {
     [ProtoContract]
     public class RequestHeader {
         [ProtoMember(1)]
-        public string Type { get; set; }
+        public Types Type { get; set; }
         [ProtoMember(2)]
-        public Map Args { get; set; }
-        [ProtoMember(3)]
-        public int Count { get; set; }
+        public List<String> BodyTypes { get; set; }
+
 
         public override string ToString() {
-            return "Request: " + Type + ":" + Count + "?" + Args;
+            return "Request: " + Type;
         }
     }
 
     [ProtoContract]
     public class ResponseHeader {
         [ProtoMember(1)]
-        public string Type { get; set; }
-        [ProtoMember(3)]
-        public int Count { get; set; }
+        public Types Type { get; set; }
+        [ProtoMember(2)]
+        public List<String> BodyTypes { get; set; }
 
         public override string ToString() {
-            return "Response: " + Type + ":" + Count;
+            return "Response: " + Type;
         }
     }
 
@@ -53,7 +52,7 @@ namespace Assets.Data {
             UserStatus us = Clone() as UserStatus;
             if (hidePrivate) {
                 var len = Cards.Count();
-                for (int i = 0; i < len; ++i) Cards[i] = 0;
+                Cards = new int[len].ToList();
             }
             return us;
         }
@@ -62,6 +61,35 @@ namespace Assets.Data {
             return MemberwiseClone();
         }
     }
+
+    [ProtoContract]
+    public enum ActionType {
+        [ProtoEnum]
+        AT_USE_CARD,
+        [ProtoEnum]
+        AT_DRAW_CARD,
+        [ProtoEnum]
+        AT_DROP_CARD,
+        [ProtoEnum]
+        AT_USE_SKILL,
+    }
+
+    [ProtoContract]
+    public class ActionDesc {
+        [ProtoMember(0)]
+        public ActionType Type;
+        [ProtoMember(1)]
+        public int User;
+        [ProtoMember(2)]
+        public List<int> Users;
+        [ProtoMember(3)]
+        public int Card;
+        [ProtoMember(4)]
+        public List<int> Cards;
+        [ProtoMember(5)]
+        public int Skill;
+    }
+    
 
     [ProtoContract]
     public enum CardType {

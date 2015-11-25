@@ -61,6 +61,8 @@
     <Compile Include="Assets\Data\BaseType.cs" />
     <Compile Include="Assets\Data\G.cs" />
     <Compile Include="Assets\GameLogic\GameLogic.cs" />
+    <Compile Include="Assets\GameLogic\MainLogic.cs" />
+    <Compile Include="Assets\GameLogic\StateMachine.cs" />
     <Compile Include="Assets\GameLogic\Status.cs" />
     <Compile Include="Assets\Data\Protocol.cs" />
     <Compile Include="Assets\Net\Message.cs" />

@@ -57,19 +57,21 @@ namespace Assets.Net {
                     clients.Add(new ClientHandler(client));
                 } catch (SocketException e) {
                     LogUtils.LogServer("Listen:"+e.Message);
+                } catch (ObjectDisposedException e) {
+                    LogUtils.LogClient(e.GetType() + ":" + e.Message);
                 }
             }
             LogUtils.LogServer("Server WorkThread Finish");
         }
 
 
-        public MessageContext Request(ClientHandler client,String type, params object[] objs) {
+        public MessageContext Request(ClientHandler client, Data.Types type, params object[] objs) {
             var c = new MessageContext(client, type, objs);
             Request(c);
             return c;
         }
 
-        public void Broadcast(ClientHandler[] clients,String type, params object[] objs) {
+        public void Broadcast(ClientHandler[] clients,Data.Types type, params object[] objs) {
             int len = clients.Length;
             MessageContext[] cs = new MessageContext[len];
             for (int i = 0; i < len; ++i) cs[i] = new MessageContext(clients[i], type, objs);
@@ -78,12 +80,28 @@ namespace Assets.Net {
 
         public void Request(params MessageContext[] contexts) {
             foreach (var e in contexts) {
-                e.request = new Data.RequestHeader() { Count = e.requestBody.Length, Type = e.type };
+                e.request = new Data.RequestHeader() {
+                    Type = e.type,
+                    BodyTypes=e.requestBody.Select(i=>i.GetType().FullName).ToList()
+                };
                 NetHelper.Send(e.client.Sock, e.request);
-                foreach (var obj in e.requestBody) NetHelper.Send(e.client.Sock, obj);
+                foreach (var obj in e.requestBody) {
+                    NetHelper.Send(e.client.Sock, obj);
+                }
             }
             foreach (var e in contexts) {
                 e.response = NetHelper.Recv<Data.ResponseHeader>(e.client.Sock);
+                var types = e.response.BodyTypes;
+                if (types != null) {
+                    int count = types.Count();
+                    e.responseBody = new object[count];
+                    for (int i = 0; i < count; ++i) {
+                        Type type = Type.GetType(types[i]);
+                        e.responseBody[i] = NetHelper.Recv(e.client.Sock, type);
+                    }
+                } else {
+                    e.responseBody = new object[0];
+                }
                 LogUtils.LogServer(e.client+e.response.ToString());
                 if (e.handler != null) e.handler(e);
             }
@@ -97,6 +115,8 @@ namespace Assets.Net {
                     logic.Start(clients.ToArray());
                 }catch(SocketException e) {
                     LogUtils.LogServer(e.Message);
+                } catch (ObjectDisposedException e) {
+                    LogUtils.LogClient(e.GetType() + ":" + e.Message);
                 }
             });
         }       

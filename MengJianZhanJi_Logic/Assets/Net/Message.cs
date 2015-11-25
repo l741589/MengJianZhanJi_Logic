@@ -12,7 +12,7 @@ namespace Assets.Net {
 
     public class MessageContext : ICloneable {
         public ClientHandler client;
-        public String type;
+        public Data.Types type;
         public Data.RequestHeader request;
         public object[] requestBody;
         public Data.ResponseHeader response;
@@ -23,7 +23,7 @@ namespace Assets.Net {
 
         }
 
-        public MessageContext(ClientHandler client, String type, params object[] requestBody) {
+        public MessageContext(ClientHandler client, Data.Types type, params object[] requestBody) {
             this.client = client;
             this.type = type;
             this.requestBody = requestBody;
@@ -48,9 +48,9 @@ namespace Assets.Net {
             LogUtils.LogServer(this.ClientInfo.Name + " joined");
         }
 
-        public T Recv<T>() {
+      /*  public T Recv<T>() {
             return NetHelper.Recv<T>(Sock);
-        }
+        }*/
 
         public override string ToString() {
             return ClientInfo.ToString();

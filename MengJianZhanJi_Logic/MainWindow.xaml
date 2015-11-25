@@ -17,13 +17,15 @@
             <Button Click="Button_Click_3">Start</Button>
         </StackPanel>
         <TextBox 
+            Visibility="Collapsed"
             Grid.Column="1"
             x:Name="tb_logServer" 
             TextWrapping="Wrap" 
             ScrollViewer.VerticalScrollBarVisibility="Visible" 
             IsReadOnly="True"/>
         <TextBox 
-            Grid.Column="2"
+            Grid.Column="1"
+            Grid.ColumnSpan="2"
             x:Name="tb_logClient" 
             TextWrapping="Wrap" 
             ScrollViewer.VerticalScrollBarVisibility="Visible" 

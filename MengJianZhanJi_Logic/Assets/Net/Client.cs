@@ -20,15 +20,18 @@ namespace Assets.Net {
         private bool isRunning = true;
         public Socket Sock { get { return TcpClient.Client; } }
         private Data.ClientInfo Info { get; set; }
-        public delegate void RequestHandler(Client client,Data.RequestHeader header);
-        private static Dictionary<String, RequestHandler> requestDispatcher = new Dictionary<string, RequestHandler>();
+        public delegate void RequestHandler(Client client,Data.RequestHeader header,object[] body);
+        private static Dictionary<Data.Types, RequestHandler> requestDispatcher = new Dictionary<Data.Types, RequestHandler>();
         private AutoResetEvent Event = new AutoResetEvent(true);
         private Action<Data.RequestHeader> response;
+
+
         public Client(String ip,Data.ClientInfo info) {
             TcpClient = new TcpClient();
             Info=info;
             TcpClient.Connect(ip, NetHelper.Port);
         }
+
         public void Loop() {
             NetHelper.Send(Sock, Info);
             isRunning = true;
@@ -36,9 +39,21 @@ namespace Assets.Net {
                 try {
                     Data.RequestHeader header = NetHelper.Recv<Data.RequestHeader>(Sock);
                     LogUtils.LogClient(header.ToString());
+                    object[] requestBody;
+                    var types = header.BodyTypes;
+                    if (types != null) {
+                        int count = types.Count();
+                        requestBody = new object[count];
+                        for (int i = 0; i < count; ++i) {
+                            Type type = Type.GetType(types[i]);
+                            requestBody[i] = NetHelper.Recv(Sock, type);
+                        }
+                    } else {
+                        requestBody = new object[0];
+                    }
                     RequestHandler a;
                     if (requestDispatcher.TryGetValue(header.Type, out a)) {
-                        a(this, header);
+                        a(this, header,requestBody);
                         Event.WaitOne();
                         if (!isRunning) break;
                         if (response != null) {
@@ -48,6 +63,8 @@ namespace Assets.Net {
                     }
                 } catch (SocketException e) {
                     LogUtils.LogClient(e.GetType()+":"+e.Message);
+                }catch(ObjectDisposedException e) {
+                    LogUtils.LogClient(e.GetType() + ":" + e.Message);
                 }
             }
             LogUtils.LogClient("Client Finished");
@@ -65,25 +82,24 @@ namespace Assets.Net {
             }
         }
 
-        public static void RegisterHandler(String type, RequestHandler handler) {
+        public static void RegisterHandler(Data.Types type, RequestHandler handler) {
             requestDispatcher[type] = handler;
         }
 
         public T Recv<T>() {
             return NetHelper.Recv<T>(Sock);
         }
-        public void Response() {
-            Response<object>(null);
-        }
-        public void Response<T>(T responseBody) {
+        
+        public void Response(params object[] responseBody) {
             response = header => {
                 Data.ResponseHeader responseHeader = new Data.ResponseHeader {
                     Type = header.Type,
-                    Count = responseBody == null ? 0 : 1
+                    BodyTypes = responseBody.Select(e => e.GetType().FullName).ToList()
                 };
                 NetHelper.Send(Sock, responseHeader);
                 if (responseBody != null) {
-                    NetHelper.SendProtoBuf(Sock, responseBody);
+                    foreach(var e in responseBody)
+                        NetHelper.SendProtoBuf(Sock, e);
                 }
             };
             Event.Set();
@@ -96,25 +112,29 @@ namespace Assets.Net {
         /////////////////////////////////////////////
 
         static void InitHanlders() {
-            RegisterHandler(Data.Types.GameStart, (c, r) => {
-                c.Info = c.Recv<Data.ClientInfo>();
+            RegisterHandler(Data.Types.GameStart, (c, r, b) => {
+                c.Info = b[0] as ClientInfo;
                 Log(c, r, "GameStart,UserIndex:" + c.Info.Index);
                 c.Response();
             });
-            RegisterHandler(Data.Types.PickRole, (c, r) => {
-                var l=c.Recv<Data.ListAdapter<int>>();
-                Log(c,r,String.Join(",", l.List));
+            RegisterHandler(Data.Types.PickRole, (c, r, b) => {
+                var l = b[0] as Data.ListAdapter<int>;
+                Log(c, r, String.Join(",", l.List));
                 c.Response(new Data.TypeAdapter<int>(l.List.First()));
             });
-            RegisterHandler(Data.Types.InitHandCards, (c, r) => {
-                var l = c.Recv<Data.ListAdapter<int>>();
-                Log(c,r,String.Join(",", l.List.Select(i=>G.Cards[i])));
+            RegisterHandler(Data.Types.InitHandCards, (c, r, b) => {
+                var l = b[0] as ListAdapter<int>;
+                Log(c, r, String.Join(",", l.List.Select(i => G.Cards[i])));
                 c.Response();
             });
-
-            RegisterHandler(Data.Types.ChangeStage, (c, r) => {
-                var b = c.Recv<StageChangeInfo>();
-                Log(c, r,"Turn:"+b.Turn+"  Stage:"+b.Stage);
+            RegisterHandler(Data.Types.ChangeStage, (c, r, b) => {
+                var s = b[0] as StageChangeInfo;
+                Log(c, r, "Turn:" + s.Turn + "  Stage:" + s.Stage);
+                c.Response();
+            });
+            RegisterHandler(Data.Types.DrawCard, (c, r, b) => {
+                var l = b[0] as Data.ListAdapter<int>;
+                Log(c, r, String.Join(",", l.List.Select(i => G.Cards[i])));
                 c.Response();
             });
         }

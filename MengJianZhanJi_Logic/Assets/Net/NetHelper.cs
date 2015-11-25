@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using UnityEngine;
@@ -54,6 +55,16 @@ namespace Assets.Net {
 
         internal static void Start() {
             if (server!=null) server.Start();
+        }
+
+        private static MethodInfo serializerDeserializeMethod;
+        static public object DeserializeProtoBuf(Stream s, Type type) {
+            if (serializerDeserializeMethod == null) {
+                serializerDeserializeMethod = typeof(Serializer).GetMethod("Deserialize");
+
+            }
+            var m = serializerDeserializeMethod.MakeGenericMethod(type);
+            return m.Invoke(null, new object[] { s });
         }
 
         static public void Recv(Socket sock, int len, Action<byte[]> a) {
@@ -114,8 +125,17 @@ namespace Assets.Net {
         static public T RecvProtoBuf<T>(Socket sock){
             return Serializer.Deserialize<T>(new MemoryStream(RecvWithLen(sock)));
         }
+
+        static public object RecvProtoBuf(Socket sock,Type type) {
+            return DeserializeProtoBuf(new MemoryStream(RecvWithLen(sock)),type);
+        }
+
         public static T Recv<T>(Socket sock) {
             return RecvProtoBuf<T>(sock);
+        }
+
+        public static object Recv(Socket sock,Type type) {
+            return RecvProtoBuf(sock,type);
         }
 
         public static void Send(Socket sock, byte[] data,Action a) {
