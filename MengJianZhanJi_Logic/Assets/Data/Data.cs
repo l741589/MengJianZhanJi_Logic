@@ -40,7 +40,9 @@ namespace Assets.Data {
         [ProtoMember(3)]
         public int Camp;
         [ProtoMember(101)]
-        public List<int> Cards;
+        public PrivateList<int> Cards;
+        
+
         [ProtoMember(103)]
         public List<int> Equip;
         [ProtoMember(104)]
@@ -50,10 +52,7 @@ namespace Assets.Data {
 
         public UserStatus Clone(bool hidePrivate) {
             UserStatus us = Clone() as UserStatus;
-            if (hidePrivate) {
-                var len = Cards.Count();
-                Cards = new int[len].ToList();
-            }
+            us.Cards = Cards.Clone(hidePrivate);
             return us;
         }
 
@@ -64,32 +63,31 @@ namespace Assets.Data {
 
     [ProtoContract]
     public enum ActionType {
-        [ProtoEnum]
-        AT_USE_CARD,
-        [ProtoEnum]
-        AT_DRAW_CARD,
-        [ProtoEnum]
-        AT_DROP_CARD,
-        [ProtoEnum]
-        AT_USE_SKILL,
+        AT_FINISH,
+        AT_ATTACK,
+        AT_DEFFEND,
+        AT_HEAL,
+        AT_REPLY_CARD
     }
 
     [ProtoContract]
     public class ActionDesc {
-        [ProtoMember(0)]
-        public ActionType Type;
         [ProtoMember(1)]
-        public int User;
+        public Types Type;
+        [ProtoMember(9)]
+        public ActionType ActionType;
         [ProtoMember(2)]
-        public List<int> Users;
+        public int User;
         [ProtoMember(3)]
-        public int Card;
-        [ProtoMember(4)]
-        public List<int> Cards;
+        public List<int> Users;
         [ProtoMember(5)]
+        public int Card;
+        [ProtoMember(6)]
+        public PrivateList<int> Cards;        
+        [ProtoMember(8)]
         public int Skill;
     }
-    
+
 
     [ProtoContract]
     public enum CardType {

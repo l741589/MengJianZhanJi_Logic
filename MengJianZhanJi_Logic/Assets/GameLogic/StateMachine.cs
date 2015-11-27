@@ -11,14 +11,16 @@ namespace Assets.GameLogic {
         ClientHandler[] Clients { get; }
         ClientHandler CurrentClient { get; }
         Status Status { get; }
-        Server Server { get;  }
+        Server Server { get; }
         Random Random { get; }
+        UserStatus CurrentUser { get; }
     }
 
     public class StateEnvironment : IStateEnvironment {
         public Status Status { get; set; }
         public ClientHandler[] Clients { get; set; }
         public ClientHandler CurrentClient { get { return Clients[Status.Turn]; } }
+        public UserStatus CurrentUser { get { return Status.UserStatus[Status.Turn]; } }
         public Server Server { get; set; }
         public Random Random { get; set; }
     }
@@ -31,6 +33,8 @@ namespace Assets.GameLogic {
         public Server Server { get { return env.Server; } }
         public Random Random { get { return env.Random; } }
         public State Parent { get; private set; }
+        public UserStatus CurrentUser { get { return env.CurrentUser; } }
+        public object Result { get; protected set; }
 
         public abstract State Run();
 
@@ -53,13 +57,23 @@ namespace Assets.GameLogic {
         public State Init(State o) {
             env = o.env;
             Parent = o.Parent;
+            Result = o.Result;
             return this;
         }
 
-        public void RunSub(State entry) {
+        public object RunSub(State entry,object initResult=null) {
             entry.Init(this);
             entry.Parent = this;
-            for (var i =  entry; i != null; i = i.Next()) ;
+            entry.Result = initResult;
+            object result = null;
+            var i = entry;
+            while (i!=null) {
+                var j = i;
+                i = j.Next();
+                result = j.Result;
+            }
+            return result;
+            
         }
 
         private string typename;
@@ -91,31 +105,43 @@ namespace Assets.GameLogic {
             LogUtils.LogServer(c.ToString() + String.Format(fmt, args));
         }
 
-        public MessageContext[] BuildContexts(Func<ClientHandler, MessageContext> creator) {
+        public MessageContext[] BuildContexts(Func<ClientHandler, MessageContext> creator,ResponseHandler handler=null) {
             int l = Clients.Length;
             MessageContext[] cs = new MessageContext[l];
-            for (int i = 0; i < l; ++i) cs[i] = creator(Clients[i]);
+            for (int i = 0; i < l; ++i) {
+                cs[i] = creator(Clients[i]);
+                if (handler != null) cs[i].handler = handler;
+            }
             return cs;
         }
 
-        public void BatchRequest(Func<ClientHandler, MessageContext> creator) {
-            Server.Request(BuildContexts(creator));
+        public void BatchRequest(Func<ClientHandler, MessageContext> creator, ResponseHandler handler = null) {
+            Server.Request(BuildContexts(creator,handler));
         }
 
-        public int[] DrawCard(int count = 1) {
+        public int[] DrawCard(UserStatus user,int count = 1) {
             int[] ret = new int[count];
             for (int i = 0; i < count; ++i) {
-                if (!Status.Stack.GetEnumerator().MoveNext()) WashCards();
-                ret[i] = Status.Stack.First();
-                Status.Stack.RemoveFirst();
+                if (Status.Stack.IsEmpty()) WashCards();
+                ret[i] = Status.Stack.List.First();
+                Status.Stack.List.RemoveFirst();
             }
+            user.Cards.AddRange(ret);
             return ret;
         }
 
         public void WashCards() {
             Status.Stack.Clear();
-            foreach (var i in G.Cards.Keys) Status.Stack.AddLast(i);
-            Mix(Status.Stack);
+            foreach (var i in G.Cards.Keys) Status.Stack.List.AddLast(i);
+            Mix(Status.Stack.List);
+        }
+
+        public void SyncStatus() {
+            BatchRequest(client => new MessageContext(client, Types.SyncStatus, Status.Clone(client.ClientInfo.Index)));
+        }
+
+        public void Broadcast(Types type,params object[] body) {
+            Server.Broadcast(Clients, type, body);
         }
     }
 }

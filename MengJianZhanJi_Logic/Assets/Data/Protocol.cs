@@ -20,7 +20,11 @@ namespace Assets.Data {
         [ProtoEnum]
         AskForAction,
         [ProtoEnum]
+        DispAction,
+        [ProtoEnum]
         SyncStatus,
+        [ProtoEnum]
+        AskForCard,
     }
 
 }

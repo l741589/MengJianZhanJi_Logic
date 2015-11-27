@@ -1,4 +1,5 @@
 ﻿using Assets.Data;
+using Assets.GameLogic;
 using Assets.Util;
 using ProtoBuf;
 using System;
@@ -19,7 +20,10 @@ namespace Assets.Net {
         private TcpClient TcpClient { get; set; }
         private bool isRunning = true;
         public Socket Sock { get { return TcpClient.Client; } }
-        private Data.ClientInfo Info { get; set; }
+        public Data.ClientInfo Info { get; private set; }
+        public Status Status { get; private set; }
+        public UserStatus MyStatus { get { return Status.UserStatus[Info.Index]; } }
+
         public delegate void RequestHandler(Client client,Data.RequestHeader header,object[] body);
         private static Dictionary<Data.Types, RequestHandler> requestDispatcher = new Dictionary<Data.Types, RequestHandler>();
         private AutoResetEvent Event = new AutoResetEvent(true);
@@ -60,6 +64,8 @@ namespace Assets.Net {
                             response(header);
                             response = null;
                         }
+                    } else {
+                        RawResponse(header);
                     }
                 } catch (SocketException e) {
                     LogUtils.LogClient(e.GetType()+":"+e.Message);
@@ -91,19 +97,22 @@ namespace Assets.Net {
         }
         
         public void Response(params object[] responseBody) {
-            response = header => {
-                Data.ResponseHeader responseHeader = new Data.ResponseHeader {
-                    Type = header.Type,
-                    BodyTypes = responseBody.Select(e => e.GetType().FullName).ToList()
-                };
-                NetHelper.Send(Sock, responseHeader);
-                if (responseBody != null) {
-                    foreach(var e in responseBody)
-                        NetHelper.SendProtoBuf(Sock, e);
-                }
-            };
+            response = header => RawResponse(header, responseBody);
             Event.Set();
         }
+
+        private void RawResponse(RequestHeader header,params object[] responseBody) {
+            Data.ResponseHeader responseHeader = new Data.ResponseHeader {
+                Type = header.Type,
+                BodyTypes = responseBody.Select(e => e.GetType().FullName).ToList()
+            };
+            NetHelper.Send(Sock, responseHeader);
+            if (responseBody != null) {
+                foreach (var e in responseBody)
+                    NetHelper.SendProtoBuf(Sock, e);
+            }
+        }
+
 
         public override string ToString() {
             return Info.ToString();
@@ -123,8 +132,10 @@ namespace Assets.Net {
                 c.Response(new Data.TypeAdapter<int>(l.List.First()));
             });
             RegisterHandler(Data.Types.InitHandCards, (c, r, b) => {
-                var l = b[0] as ListAdapter<int>;
-                Log(c, r, String.Join(",", l.List.Select(i => G.Cards[i])));
+                var l = b[0] as Data.ActionDesc;
+                c.MyStatus.Cards.AddRange(l.Cards.List);
+                Log(c, r, String.Join(",", l.Cards.List.Select(i => G.Cards[i])));
+                Log(c, r, "HandCards:" + String.Join(",", c.MyStatus.Cards.List.Select(i => G.Cards[i])));
                 c.Response();
             });
             RegisterHandler(Data.Types.ChangeStage, (c, r, b) => {
@@ -133,9 +144,74 @@ namespace Assets.Net {
                 c.Response();
             });
             RegisterHandler(Data.Types.DrawCard, (c, r, b) => {
-                var l = b[0] as Data.ListAdapter<int>;
-                Log(c, r, String.Join(",", l.List.Select(i => G.Cards[i])));
+                var l = b[0] as Data.ActionDesc;
+                if (l.User == c.Info.Index) {
+                    LogUtils.Assert(l.Cards.List != null);
+                    c.MyStatus.Cards.AddRange(l.Cards.List);
+                    Log(c, r, String.Join(",", l.Cards.List.Select(i => G.Cards[i])));
+                    Log(c, r, "HandCards:" + String.Join(",", c.MyStatus.Cards.List.Select(i => G.Cards[i])));
+                } else {
+                    LogUtils.Assert(l.Cards.List == null);
+                    c.Status.UserStatus[l.User].Cards.Count += l.Cards.Count;
+                    Log(c, r, "User(" + l.User + ") Drew "+l.Cards.Count+" Cards");
+                    Log(c, r, "UserCardCount:" + String.Join(",",c.Status.UserStatus.Select(us => us.Cards.Count)));
+                }                
                 c.Response();
+            });
+            RegisterHandler(Data.Types.SyncStatus, (c, r, b) => {
+                c.Status = b[0] as Data.Status;
+                c.Response();
+            });
+            RegisterHandler(Data.Types.AskForAction, (c, r, b) => {
+                foreach(var e in c.MyStatus.Cards.List) {
+                    if (G.Cards[e].Face == CardFace.CF_JinJi) {
+                        var user = (c.Status.Turn + 1) % c.Status.UserStatus.Length;
+                        var ad = new ActionDesc {
+                            ActionType = ActionType.AT_ATTACK,
+                            User = c.Info.Index,
+                            Users = new int[]{ user }.ToList(),
+                            Card = e
+                        };
+                        c.Response(ad);
+                        return;
+                    }
+                }
+                c.Response(new ActionDesc {
+                    ActionType = ActionType.AT_FINISH
+                });
+            });
+            RegisterHandler(Types.DispAction, (c, r, b) => {
+                var a = b[0] as ActionDesc;
+                switch (a.ActionType) {
+                case ActionType.AT_ATTACK:
+                    Log(c, r, a.User + "使用" + CardInfo.ToString(a.Card) + "攻击" + a.Users[0]);
+                    break;
+                }
+                c.Response();
+            });
+            RegisterHandler(Types.AskForCard, (c, r, b)=>{
+                var a = b[0] as ActionDesc;
+                if (a.User != c.Info.Index) {
+                    c.Response();
+                    return;
+                }
+                if (a.Cards.Count == 1) {
+                    foreach(var i in c.MyStatus.Cards.List) {
+                        if (G.Cards[i].Face == a.Cards[0]) {
+                            c.Response(new ActionDesc {
+                                ActionType = ActionType.AT_REPLY_CARD,
+                                User = c.Info.Index,
+                                Cards = new int[] { i}.ToList()
+                            });
+                            Log(c, r, "出牌：" + CardInfo.ToString(i));
+                            return;
+                        }
+                    }
+                    c.Response();
+                    return;
+                } else {
+                    throw new NotImplementedException();
+                }
             });
         }
 

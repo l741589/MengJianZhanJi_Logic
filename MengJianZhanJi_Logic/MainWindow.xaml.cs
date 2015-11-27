@@ -52,12 +52,14 @@ namespace MengJianZhanJi_Logic {
                     Grid.SetColumnSpan(tb_logClient, 1);
                 }
                 tb_logServer.AppendText(s + "\n");
+                tb_logServer.ScrollToEnd();
             }));
         }
 
         public void LogClient(string s) {            
             this.Dispatcher.Invoke(new Action(() => {
                 tb_logClient.AppendText(s + "\n");
+                tb_logClient.ScrollToEnd();
             }));
         }
 
@@ -75,6 +77,11 @@ namespace MengJianZhanJi_Logic {
 
         private void Button_Click_5(object sender, RoutedEventArgs e) {
             System.Diagnostics.Process.Start(AppDomain.CurrentDomain.BaseDirectory + "MengJianZhanJi_Logic.exe");
+        }
+
+        protected override void OnClosed(EventArgs e) {
+            NetHelper.Shutdown();
+            base.OnClosed(e);            
         }
     }
 

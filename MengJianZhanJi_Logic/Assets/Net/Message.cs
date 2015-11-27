@@ -29,6 +29,11 @@ namespace Assets.Net {
             this.requestBody = requestBody;
         }
 
+        public T getResponse<T>(int index) where T :class{
+            if (index >= responseBody.Length) return default(T);
+            return responseBody[index] as T;
+        }
+
         public object Clone() {
             return MemberwiseClone();
         }
@@ -39,7 +44,7 @@ namespace Assets.Net {
         public Data.ClientInfo ClientInfo { get; set; }
         public TcpClient Client { get; private set; }
         public Socket Sock { get { return Client.Client; } }
-        public int Index { get; set; }
+        public int Index { get { return ClientInfo.Index; } }
         public ClientHandler(TcpClient client) {
             this.Client = client;
             this.ClientInfo = NetHelper.Recv<Data.ClientInfo>(Sock);

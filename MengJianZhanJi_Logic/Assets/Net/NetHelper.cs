@@ -40,10 +40,6 @@ namespace Assets.Net {
         }
 
         static public void Shutdown() {
-            if (server != null) {
-                server.Close();
-                server = null;
-            }
             if (client != null) {
                 client.Close();
                 client = null;
@@ -51,6 +47,10 @@ namespace Assets.Net {
             if (clientThread != null) {
                 clientThread.Interrupt();
             }
+            if (server != null) {
+                server.Close();
+                server = null;
+            }            
         }
 
         internal static void Start() {

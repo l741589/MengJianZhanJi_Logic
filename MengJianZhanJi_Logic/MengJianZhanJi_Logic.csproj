@@ -59,15 +59,18 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Assets\Data\BaseType.cs" />
+    <Compile Include="Assets\Data\CardFace.cs" />
     <Compile Include="Assets\Data\G.cs" />
+    <Compile Include="Assets\Data\PrivateList.cs" />
     <Compile Include="Assets\GameLogic\GameLogic.cs" />
     <Compile Include="Assets\GameLogic\MainLogic.cs" />
     <Compile Include="Assets\GameLogic\StateMachine.cs" />
-    <Compile Include="Assets\GameLogic\Status.cs" />
+    <Compile Include="Assets\Data\Status.cs" />
     <Compile Include="Assets\Data\Protocol.cs" />
     <Compile Include="Assets\Net\Message.cs" />
     <Compile Include="Assets\Util\IOUtils.cs" />
     <Compile Include="Assets\Util\LogUtils.cs" />
+    <Compile Include="Assets\Util\Util.cs" />
     <Compile Include="UnityEngine\Debug.cs" />
     <Compile Include="UnityEngine\Loom.cs" />
     <Compile Include="UnityEngine\MonoBehaviour.cs" />

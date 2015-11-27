@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace Assets.Util {
@@ -25,6 +26,26 @@ namespace Assets.Util {
 
         public static void LogSystem(String s) {
             Impl.LogSystem(s);
+        }
+
+        public static void Assert(bool condition,String message="") {
+            if (condition) return;
+            throw new AssertException(message);
+        }
+    }
+
+    [Serializable]
+    internal class AssertException : Exception {
+        public AssertException() {
+        }
+
+        public AssertException(string message) : base(message) {
+        }
+
+        public AssertException(string message, Exception innerException) : base(message, innerException) {
+        }
+
+        protected AssertException(SerializationInfo info, StreamingContext context) : base(info, context) {
         }
     }
 }

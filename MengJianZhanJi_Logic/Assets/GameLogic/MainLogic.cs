@@ -24,15 +24,20 @@ namespace Assets.GameLogic {
     public class GameStartState : State{
         public override State Run() {
             for (int i = 0; i < Clients.Length; ++i) Clients[i].ClientInfo.Index = i;
-            Status.ClientCount = Clients.Count();
-            Status.UserStatus = new UserStatus[Status.ClientCount];
-            for (int i = 0; i < Status.ClientCount; ++i) {
+            Status.Stack = new LinkedList<int>();
+            Status.Roles = new LinkedList<int>();
+            Status.UserStatus = new UserStatus[Clients.Count()];
+            for (int i = 0; i < Status.UserStatus.Length; ++i) {
                 Status.UserStatus[i] = new UserStatus() {
                     Index = i,
-                    Camp = 0
+                    Camp = 0,
+                    Cards=new List<int>(),
+                    Equip = new List<int>(),
+                    Buff=new List<int>()
                 };
             }
             BatchRequest(client => new MessageContext(client, T.GameStart, client.ClientInfo));
+            SyncStatus();
             return new PickRoleState();
         }
     }
@@ -50,7 +55,7 @@ namespace Assets.GameLogic {
                 return new MessageContext(client, T.PickRole, new Data.ListAdapter<int>(ss)) {
                     handler = cx => {
                         int role = cx.responseBody[0] as Data.TypeAdapter<int>;
-                        Status.UserStatus[cx.client.Index].Role = role;
+                        Status.UserStatus[cx.client.ClientInfo.Index].Role = role;
                         Log(cx.client, "picked role: {0}", role);
                     }
                 };
@@ -61,7 +66,11 @@ namespace Assets.GameLogic {
 
     public class DealState : State {
         public override State Run() {
-            BatchRequest(client => new MessageContext(client, T.InitHandCards, new Data.ListAdapter<int>(DrawCard(4))));
+            BatchRequest(client => new MessageContext(client, T.InitHandCards,
+                new Data.ActionDesc {
+                    User = client.Index,
+                    Cards = DrawCard(Status.UserStatus[client.Index], 4).ToList()
+                }));
             return new GameLoopState();
         }
     }
@@ -78,7 +87,6 @@ namespace Assets.GameLogic {
     public class MainLogic {
 
         private Server server;
-        private Status status;
 
         public MainLogic(Server server) {
             this.server = server;
