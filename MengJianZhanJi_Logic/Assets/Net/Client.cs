@@ -1,7 +1,8 @@
 ﻿using Assets.Data;
 using Assets.GameLogic;
-using Assets.Util;
+using Assets.Utility;
 using ProtoBuf;
+using ProtoBuf.Meta;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,6 +27,8 @@ namespace Assets.Net {
 
         public delegate void RequestHandler(Client client,Data.RequestHeader header,object[] body);
         private static Dictionary<Data.Types, RequestHandler> requestDispatcher = new Dictionary<Data.Types, RequestHandler>();
+        public delegate void RequestActionHandler(Client client, Data.RequestHeader header, ActionDesc a);
+        private static Dictionary<Data.ActionType, RequestActionHandler> requestActionDispatcher = new Dictionary<Data.ActionType, RequestActionHandler>();
         private AutoResetEvent Event = new AutoResetEvent(true);
         private Action<Data.RequestHeader> response;
 
@@ -92,6 +95,10 @@ namespace Assets.Net {
             requestDispatcher[type] = handler;
         }
 
+        public static void RegisterHandler(ActionType type, RequestActionHandler handler) {
+            requestActionDispatcher[type] = handler;
+        }
+
         public T Recv<T>() {
             return NetHelper.Recv<T>(Sock);
         }
@@ -121,6 +128,24 @@ namespace Assets.Net {
         /////////////////////////////////////////////
 
         static void InitHanlders() {
+            RegisterHandler(Types.Action, (c, r, b) => {
+                RequestActionHandler h;
+                if (b == null || b.Length == 0) {
+                    c.Response();
+                    return;
+                }
+                var a = b[0] as ActionDesc;
+                if (a == null) {
+                    c.Response();
+                    return;
+                }
+                Log(c, r, a.ToString());
+                if (requestActionDispatcher.TryGetValue(a.ActionType, out h)) {
+                    h(c, r, a);
+                } else {
+                    c.Response();
+                }
+            });
             RegisterHandler(Data.Types.GameStart, (c, r, b) => {
                 c.Info = b[0] as ClientInfo;
                 Log(c, r, "GameStart,UserIndex:" + c.Info.Index);
@@ -131,29 +156,20 @@ namespace Assets.Net {
                 Log(c, r, String.Join(",", l.List));
                 c.Response(new Data.TypeAdapter<int>(l.List.First()));
             });
-            RegisterHandler(Data.Types.InitHandCards, (c, r, b) => {
-                var l = b[0] as Data.ActionDesc;
-                c.MyStatus.Cards.AddRange(l.Cards.List);
-                Log(c, r, String.Join(",", l.Cards.List.Select(i => G.Cards[i])));
-                Log(c, r, "HandCards:" + String.Join(",", c.MyStatus.Cards.List.Select(i => G.Cards[i])));
-                c.Response();
-            });
             RegisterHandler(Data.Types.ChangeStage, (c, r, b) => {
                 var s = b[0] as StageChangeInfo;
                 Log(c, r, "Turn:" + s.Turn + "  Stage:" + s.Stage);
                 c.Response();
             });
-            RegisterHandler(Data.Types.DrawCard, (c, r, b) => {
-                var l = b[0] as Data.ActionDesc;
+            RegisterHandler(ActionType.AT_DRAW_CARD, (c, r, l) => {
+                LogUtils.Assert(l.ActionType == ActionType.AT_DRAW_CARD);
                 if (l.User == c.Info.Index) {
                     LogUtils.Assert(l.Cards.List != null);
                     c.MyStatus.Cards.AddRange(l.Cards.List);
-                    Log(c, r, String.Join(",", l.Cards.List.Select(i => G.Cards[i])));
                     Log(c, r, "HandCards:" + String.Join(",", c.MyStatus.Cards.List.Select(i => G.Cards[i])));
                 } else {
                     LogUtils.Assert(l.Cards.List == null);
                     c.Status.UserStatus[l.User].Cards.Count += l.Cards.Count;
-                    Log(c, r, "User(" + l.User + ") Drew "+l.Cards.Count+" Cards");
                     Log(c, r, "UserCardCount:" + String.Join(",",c.Status.UserStatus.Select(us => us.Cards.Count)));
                 }                
                 c.Response();
@@ -162,35 +178,37 @@ namespace Assets.Net {
                 c.Status = b[0] as Data.Status;
                 c.Response();
             });
-            RegisterHandler(Data.Types.AskForAction, (c, r, b) => {
-                foreach(var e in c.MyStatus.Cards.List) {
-                    if (G.Cards[e].Face == CardFace.CF_JinJi) {
-                        var user = (c.Status.Turn + 1) % c.Status.UserStatus.Length;
-                        var ad = new ActionDesc {
-                            ActionType = ActionType.AT_ATTACK,
-                            User = c.Info.Index,
-                            Users = new int[]{ user }.ToList(),
-                            Card = e
-                        };
-                        c.Response(ad);
-                        return;
+            RegisterHandler(ActionType.AT_ASK, (c, r, a) => {
+                if (a.Arg1 == 0) {
+                    foreach (var e in c.MyStatus.Cards.List) {
+                        if (G.Cards[e].Face == CardFace.CF_XiuLi&&c.MyStatus.Hp<c.MyStatus.MaxHp) {
+                            c.Response(new ActionDesc {
+                                ActionType = ActionType.AT_USE_CARD,
+                                User = c.Info.Index,
+                                Card = e
+                            });
+                            return;
+                        }
+                        if (G.Cards[e].Face == CardFace.CF_JinJi) {
+                            var user = c.Status.Turn;
+                            while (user == c.Status.Turn || c.Status.UserStatus[user].IsDead)
+                                user = (user + 1) % c.Status.UserStatus.Length;
+                            var ad = new ActionDesc {
+                                ActionType = ActionType.AT_USE_CARD,
+                                User = c.Info.Index,
+                                Users = new int[] { user }.ToList(),
+                                Card = e
+                            };
+                            c.Response(ad);
+                            return;
+                        }
                     }
                 }
                 c.Response(new ActionDesc {
-                    ActionType = ActionType.AT_FINISH
+                    ActionType = ActionType.AT_CANCEL
                 });
             });
-            RegisterHandler(Types.DispAction, (c, r, b) => {
-                var a = b[0] as ActionDesc;
-                switch (a.ActionType) {
-                case ActionType.AT_ATTACK:
-                    Log(c, r, a.User + "使用" + CardInfo.ToString(a.Card) + "攻击" + a.Users[0]);
-                    break;
-                }
-                c.Response();
-            });
-            RegisterHandler(Types.AskForCard, (c, r, b)=>{
-                var a = b[0] as ActionDesc;
+            RegisterHandler(ActionType.AT_ASK_CARD, (c, r, a)=>{
                 if (a.User != c.Info.Index) {
                     c.Response();
                     return;
@@ -199,19 +217,50 @@ namespace Assets.Net {
                     foreach(var i in c.MyStatus.Cards.List) {
                         if (G.Cards[i].Face == a.Cards[0]) {
                             c.Response(new ActionDesc {
-                                ActionType = ActionType.AT_REPLY_CARD,
+                                ActionType = ActionType.AT_USE_CARD,
                                 User = c.Info.Index,
                                 Cards = new int[] { i}.ToList()
                             });
-                            Log(c, r, "出牌：" + CardInfo.ToString(i));
                             return;
                         }
                     }
-                    c.Response();
+                    c.Response(new ActionDesc {
+                        ActionType = ActionType.AT_USE_CARD,
+                        User=c.Info.Index,
+                    });
                     return;
                 } else {
                     throw new NotImplementedException();
                 }
+            });
+            RegisterHandler(ActionType.AT_REFUSE, (c, r, b) => {
+                c.Response();
+            });
+            RegisterHandler(ActionType.AT_ALTER_HP, (c, r, a) => {
+                var user = c.Status.UserStatus[a.User];
+                user.Hp += a.Arg1;
+                user.MaxHp += a.Arg2;
+                Log(c, r, String.Join(",", c.Status.UserStatus.Select(u => u.IsDead ? "DEAD" : u.Hp + "/" + u.MaxHp)));
+                c.Response();
+            });
+            RegisterHandler(ActionType.AT_ASK_DROP_CARD, (c, r, a) => {
+                c.Response(new ActionDesc(ActionType.AT_DROP_CARD) {
+                    User = c.Info.Index,
+                    Cards = c.MyStatus.Cards.List.Skip(c.MyStatus.Hp).ToList()
+                });
+            });
+            RegisterHandler(ActionType.AT_DROP_CARD, (c, r, a) => {
+                if (c.Info.Index == a.User) {
+                    foreach (var i in a.Cards.List) c.MyStatus.Cards.Remove(i);
+                    Log(c, r, "HandCards:" + String.Join(",", c.MyStatus.Cards.List.Select(i => G.Cards[i])));
+                } else {
+                    c.Status.UserStatus[a.User].Cards.Count -= a.Cards.Count;
+                }
+                c.Response();
+            });
+            RegisterHandler(ActionType.AT_WIN, (c, r, a) => {
+                Log(c, r, a.Users.Contains(c.Info.Index) ? "胜利" : "失败");
+                c.Response();
             });
         }
 

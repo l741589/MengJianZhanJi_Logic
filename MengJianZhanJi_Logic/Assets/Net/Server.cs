@@ -1,4 +1,4 @@
-﻿using Assets.Util;
+﻿using Assets.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -102,6 +102,9 @@ namespace Assets.Net {
                 } else {
                     e.responseBody = new object[0];
                 }
+
+            }
+            foreach (var e in contexts) {
                 LogUtils.LogServer(e.client+e.response.ToString());
                 if (e.handler != null) e.handler(e);
             }

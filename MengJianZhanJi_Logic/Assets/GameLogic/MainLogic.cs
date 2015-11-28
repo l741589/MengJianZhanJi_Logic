@@ -6,7 +6,7 @@ using System.Text;
 using T = Assets.Data.Types;
 using Data = Assets.Data;
 using UnityEngine;
-using Assets.Util;
+using Assets.Utility;
 using Assets.Data;
 namespace Assets.GameLogic {
   
@@ -31,6 +31,8 @@ namespace Assets.GameLogic {
                 Status.UserStatus[i] = new UserStatus() {
                     Index = i,
                     Camp = 0,
+                    Hp = 1,
+                    MaxHp=1,
                     Cards=new List<int>(),
                     Equip = new List<int>(),
                     Buff=new List<int>()
@@ -66,8 +68,9 @@ namespace Assets.GameLogic {
 
     public class DealState : State {
         public override State Run() {
-            BatchRequest(client => new MessageContext(client, T.InitHandCards,
+            BatchRequest(client => new MessageContext(client,
                 new Data.ActionDesc {
+                    ActionType=ActionType.AT_DRAW_CARD,
                     User = client.Index,
                     Cards = DrawCard(Status.UserStatus[client.Index], 4).ToList()
                 }));

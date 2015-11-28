@@ -58,6 +58,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Assets\Data\ActionDesc.cs" />
     <Compile Include="Assets\Data\BaseType.cs" />
     <Compile Include="Assets\Data\CardFace.cs" />
     <Compile Include="Assets\Data\G.cs" />
@@ -68,9 +69,9 @@
     <Compile Include="Assets\Data\Status.cs" />
     <Compile Include="Assets\Data\Protocol.cs" />
     <Compile Include="Assets\Net\Message.cs" />
-    <Compile Include="Assets\Util\IOUtils.cs" />
-    <Compile Include="Assets\Util\LogUtils.cs" />
-    <Compile Include="Assets\Util\Util.cs" />
+    <Compile Include="Assets\Utility\IOUtils.cs" />
+    <Compile Include="Assets\Utility\LogUtils.cs" />
+    <Compile Include="Assets\Utility\Util.cs" />
     <Compile Include="UnityEngine\Debug.cs" />
     <Compile Include="UnityEngine\Loom.cs" />
     <Compile Include="UnityEngine\MonoBehaviour.cs" />

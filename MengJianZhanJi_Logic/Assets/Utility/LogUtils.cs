@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 
-namespace Assets.Util {
+namespace Assets.Utility {
 
     public interface ILogUtils {
         void LogServer(String s);

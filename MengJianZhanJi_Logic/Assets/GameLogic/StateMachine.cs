@@ -1,10 +1,11 @@
 ﻿using Assets.Data;
 using Assets.Net;
-using Assets.Util;
+using Assets.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace Assets.GameLogic {
     public interface IStateEnvironment {
@@ -25,6 +26,23 @@ namespace Assets.GameLogic {
         public Random Random { get; set; }
     }
 
+    public class ParentState : State {
+
+        public State State { get; private set; }
+        public int ToDepth { get; private set; }
+
+        public ParentState(State state,int toDepth=int.MaxValue) {
+            State = state;
+            ToDepth = toDepth;
+        }
+
+        
+
+        public override State Run() {
+            throw new NotImplementedException();
+        }
+    }
+
     public abstract partial class State : IStateEnvironment {
         private IStateEnvironment env;
         public ClientHandler[] Clients { get { return env.Clients; } }
@@ -35,6 +53,7 @@ namespace Assets.GameLogic {
         public State Parent { get; private set; }
         public UserStatus CurrentUser { get { return env.CurrentUser; } }
         public object Result { get; protected set; }
+        public ParentState ParentState { get; private set; }
 
         public abstract State Run();
 
@@ -46,10 +65,16 @@ namespace Assets.GameLogic {
         }
 
         public State Next() {
+            Thread.Sleep(1000);
             String stateName = GetType().Name;
             LogUtils.LogServer(">>>"+this);
             State ret = Run();
             LogUtils.LogServer("<<<" + this);
+            if (ParentState != null) {
+                if (Depth >= ParentState.ToDepth) {
+                    ret=ParentState.State;
+                }
+            }
             if (ret!=null) ret.Init(this);
             return ret;
         }
@@ -71,6 +96,10 @@ namespace Assets.GameLogic {
                 var j = i;
                 i = j.Next();
                 result = j.Result;
+                if (i is ParentState) {
+                    this.ParentState = i as ParentState;
+                    break;
+                }
             }
             return result;
             
@@ -82,6 +111,13 @@ namespace Assets.GameLogic {
             if (typename==null) typename = GetType().Name;
             if (Parent == null) return typename;
             else return Parent + "." + typename;
+        }
+
+        public int Depth {
+            get {
+                if (Parent == null) return 0;
+                return Parent.Depth + 1;
+            }
         }
     }
 
@@ -142,6 +178,10 @@ namespace Assets.GameLogic {
 
         public void Broadcast(Types type,params object[] body) {
             Server.Broadcast(Clients, type, body);
+        }
+
+        public void Broadcast(ActionDesc body) {
+            Server.Broadcast(Clients, Types.Action, body);
         }
     }
 }

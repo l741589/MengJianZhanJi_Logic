@@ -39,15 +39,19 @@ namespace Assets.Data {
         public int Index;
         [ProtoMember(3)]
         public int Camp;
+        [ProtoMember(5)]
+        public int Hp { get; set; }
+        [ProtoMember(6)]
+        public int MaxHp { get; set; }
+        [ProtoMember(7, IsRequired = true)]
+        public bool IsDead = false;
         [ProtoMember(101)]
         public PrivateList<int> Cards;
-        
-
         [ProtoMember(103)]
         public List<int> Equip;
         [ProtoMember(104)]
         public List<int> Buff;
-
+        
         public UserStatus() {}
 
         public UserStatus Clone(bool hidePrivate) {
@@ -61,33 +65,7 @@ namespace Assets.Data {
         }
     }
 
-    [ProtoContract]
-    public enum ActionType {
-        AT_FINISH,
-        AT_ATTACK,
-        AT_DEFFEND,
-        AT_HEAL,
-        AT_REPLY_CARD
-    }
-
-    [ProtoContract]
-    public class ActionDesc {
-        [ProtoMember(1)]
-        public Types Type;
-        [ProtoMember(9)]
-        public ActionType ActionType;
-        [ProtoMember(2)]
-        public int User;
-        [ProtoMember(3)]
-        public List<int> Users;
-        [ProtoMember(5)]
-        public int Card;
-        [ProtoMember(6)]
-        public PrivateList<int> Cards;        
-        [ProtoMember(8)]
-        public int Skill;
-    }
-
+   
 
     [ProtoContract]
     public enum CardType {

@@ -33,18 +33,21 @@ namespace Assets.Data {
     [ProtoContract]
     public class Status : ICloneable{
 
-        [ProtoMember(2)]
+        [ProtoMember(1)]
         public PrivateLinkedList<int> Stack;
         public LinkedList<int> Roles;
 
-        [ProtoMember(1)]
+        [ProtoMember(2)]
         public UserStatus[] UserStatus;
+
         [ProtoMember(3)]
         public int Turn { get { return turn; } set { turn = value; if (turn >= UserStatus.Length) turn = 0; } }
         private int turn;
 
         [ProtoMember(4)]
         public RoundStage Stage;
+
+        
 
         public Status Clone(int hide = -1) {
             Status us = (this as ICloneable).Clone() as Status;

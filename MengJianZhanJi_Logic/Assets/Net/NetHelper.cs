@@ -1,4 +1,4 @@
-﻿using Assets.Util;
+﻿using Assets.Utility;
 using ProtoBuf;
 using System;
 using System.Collections.Generic;
@@ -65,6 +65,16 @@ namespace Assets.Net {
             }
             var m = serializerDeserializeMethod.MakeGenericMethod(type);
             return m.Invoke(null, new object[] { s });
+        }
+
+        private static MethodInfo serializerSerializeMethod;
+        static public object SerializeProtoBuf(Stream s,object obj, Type type) {
+            if (serializerSerializeMethod == null) {
+                var cs = typeof(Serializer).GetMethods().Single(mm => mm.Name == "Serialize"&&mm.GetParameters()[0].ParameterType==typeof(Stream));
+                serializerSerializeMethod = cs;
+            }
+            var m = serializerSerializeMethod.MakeGenericMethod(type);
+            return m.Invoke(null, new object[] { s,obj });
         }
 
         static public void Recv(Socket sock, int len, Action<byte[]> a) {
@@ -199,9 +209,19 @@ namespace Assets.Net {
             SendWithLen(sock, os.ToArray());
         }
 
+        public static void SendProtoBuf(Socket sock, object data) {
+            MemoryStream os = new MemoryStream();
+            SerializeProtoBuf(os, data,data.GetType());
+            SendWithLen(sock, os.ToArray());
+        }
+
         public static void Send<T>(Socket sock, T data) {
             SendProtoBuf<T>(sock, data);
         }
 
+
+        public static void Send(Socket sock, object data) {
+            SendProtoBuf(sock, data);
+        }
     }
 }

@@ -68,6 +68,14 @@ lines.append("	public static class CardFace{");
 for face in faces:
 	lines.append("\t\t/** "+face+" */");
 	lines.append("\t\tpublic const int CF_"+genSym(face)+" = "+str(faces[face])+";");
+lines.append("");
+lines.append("\t\tpublic static string getName(int face) {");
+lines.append("\t\t\tswitch(face) {");
+for face in faces:
+	lines.append("\t\t\tcase CF_"+genSym(face)+": return \""+face+"\";");
+lines.append("\t\t\t}");
+lines.append("\t\t\treturn null;");
+lines.append("\t\t}");
 lines.append("	}");	
 lines.append("}");	
 f=open('Data/CardFace.cs','w');

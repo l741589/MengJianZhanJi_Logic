@@ -1,4 +1,4 @@
-﻿using Assets.Util;
+﻿using Assets.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,6 +23,12 @@ namespace Assets.Net {
 
         }
 
+        public MessageContext(ClientHandler client, Data.ActionDesc a) {
+            this.client = client;
+            this.type = Data.Types.Action;
+            this.requestBody =new object[]{ a};
+        }
+
         public MessageContext(ClientHandler client, Data.Types type, params object[] requestBody) {
             this.client = client;
             this.type = type;
@@ -36,6 +42,12 @@ namespace Assets.Net {
 
         public object Clone() {
             return MemberwiseClone();
+        }
+
+        public override string ToString() {
+            return client.ToString() + type +
+                (requestBody != null ? String.Join(",", requestBody) : "NoReq") + " " +
+                (responseBody != null ? String.Join(",", responseBody) : "NoReq");
         }
     }
 

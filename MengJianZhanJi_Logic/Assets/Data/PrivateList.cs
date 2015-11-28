@@ -10,11 +10,11 @@ namespace Assets.Data {
         int Count { get; set; }
         ListType List { get; set; }
     }
-    public class BasePrivateList<ListType,T> : ICloneable, IPrivateList<ListType> where ListType : ICollection<T>, IEnumerable<T>, new() {
+    public class BasePrivateList<ListType,T> : ICloneable, IPrivateList<ListType> where ListType :class, ICollection<T>, IEnumerable<T>, new() {
         private ListType list;
-        
-        public virtual ListType List { get { return Hide?default(ListType):list; } set { if (!Hide) list = value; } }
-        public virtual bool Hide { get { return hide; } private set { realCount = list!=null?list.Count:0; hide = value; } }
+
+        public virtual ListType List { get { return hide ? null : list ?? (list = new ListType()); } set { if (!hide) list = value; } }
+        public virtual bool Hide { get { return hide; } set { realCount = list!=null?list.Count:realCount; hide = value; } }
         private bool hide = false;
 
         public BasePrivateList(ListType source) {
@@ -73,7 +73,6 @@ namespace Assets.Data {
         public BasePrivateList<ListType, T> Clone(bool hide) {
             var c = Clone() as BasePrivateList<ListType, T>;
             c.Hide = hide;
-            if (hide) c.list = default(ListType);
             return c;
         }
     }
@@ -93,8 +92,13 @@ namespace Assets.Data {
 
         [ProtoMember(1)]
         public override int Count { get { return base.Count; } set { base.Count = value; } }
+        [ProtoMember(2)]
+        public override bool Hide { get { return base.Hide; } set { base.Hide = value; } }
         [ProtoMember(3)]
-        public override List<T> List { get { return base.List; } set { base.List = value; } }
+        public override List<T> List {
+            get { return base.List; }
+            set { base.List = value; }
+        }
 
         public static implicit operator PrivateList<T>(List<T> source) {
             return new PrivateList<T>(source);
@@ -118,6 +122,8 @@ namespace Assets.Data {
 
         [ProtoMember(1)]
         public override int Count { get { return base.Count; } set { base.Count = value; } }
+        [ProtoMember(2)]
+        public override bool Hide { get { return base.Hide; } set { base.Hide = value; } }
         [ProtoMember(3)]
         public override LinkedList<T> List { get { return base.List; } set { base.List = value; } }
 

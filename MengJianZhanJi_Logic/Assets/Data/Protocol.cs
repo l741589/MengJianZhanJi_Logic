@@ -8,23 +8,17 @@ namespace Assets.Data {
     [ProtoContract]
     public enum Types {
         [ProtoEnum]
+        Null,
+        [ProtoEnum]
         GameStart,
         [ProtoEnum]
         PickRole,
         [ProtoEnum]
-        InitHandCards,
-        [ProtoEnum]
         ChangeStage,
         [ProtoEnum]
-        DrawCard,
-        [ProtoEnum]
-        AskForAction,
-        [ProtoEnum]
-        DispAction,
+        Action,
         [ProtoEnum]
         SyncStatus,
-        [ProtoEnum]
-        AskForCard,
     }
 
 }

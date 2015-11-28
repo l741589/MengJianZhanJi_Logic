@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace Assets.Util {
+namespace Assets.Utility {
     public static class IOUtils {
         public static String ReadStringFromFile(string name) {
 #if WPF
