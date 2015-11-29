@@ -111,6 +111,7 @@ namespace Assets.Net {
             RecvProtoBuf<T>(sock, a);
         }
         static public byte[] Recv(Socket sock, int length) {
+            
             byte[] bs = new byte[length];
             int start = 0;
             while (start < length) {

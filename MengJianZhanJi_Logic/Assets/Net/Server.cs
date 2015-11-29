@@ -78,6 +78,38 @@ namespace Assets.Net {
             Request(cs);
         }
 
+        public void RequestFirst(params MessageContext[] contexts) {
+            foreach (var e in contexts) {
+                e.request = new Data.RequestHeader() {
+                    Type = e.type,
+                    BodyTypes = e.requestBody.Select(i => i.GetType().FullName).ToList()
+                };
+                NetHelper.Send(e.client.Sock, e.request);
+                foreach (var obj in e.requestBody) {
+                    NetHelper.Send(e.client.Sock, obj);
+                }
+            }
+            foreach (var e in contexts) {
+                e.response = NetHelper.Recv<Data.ResponseHeader>(e.client.Sock);
+                var types = e.response.BodyTypes;
+                if (types != null) {
+                    int count = types.Count();
+                    e.responseBody = new object[count];
+                    for (int i = 0; i < count; ++i) {
+                        Type type = Type.GetType(types[i]);
+                        e.responseBody[i] = NetHelper.Recv(e.client.Sock, type);
+                    }
+                } else {
+                    e.responseBody = new object[0];
+                }
+
+            }
+            foreach (var e in contexts) {
+                LogUtils.LogServer(e.client + e.response.ToString());
+                if (e.handler != null) e.handler(e);
+            }
+        }
+
         public void Request(params MessageContext[] contexts) {
             foreach (var e in contexts) {
                 e.request = new Data.RequestHeader() {
@@ -102,7 +134,6 @@ namespace Assets.Net {
                 } else {
                     e.responseBody = new object[0];
                 }
-
             }
             foreach (var e in contexts) {
                 LogUtils.LogServer(e.client+e.response.ToString());

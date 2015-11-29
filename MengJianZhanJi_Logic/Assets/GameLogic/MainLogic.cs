@@ -31,8 +31,8 @@ namespace Assets.GameLogic {
                 Status.UserStatus[i] = new UserStatus() {
                     Index = i,
                     Camp = 0,
-                    Hp = 1,
-                    MaxHp=1,
+                    Hp = 3,
+                    MaxHp=4,
                     Cards=new List<int>(),
                     Equip = new List<int>(),
                     Buff=new List<int>()

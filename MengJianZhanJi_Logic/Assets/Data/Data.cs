@@ -12,7 +12,8 @@ namespace Assets.Data {
         public Types Type { get; set; }
         [ProtoMember(2)]
         public List<String> BodyTypes { get; set; }
-
+        [ProtoMember(3, IsRequired = true)]
+        public long Time = DateTime.Now.Ticks;
 
         public override string ToString() {
             return "Request: " + Type;
@@ -25,6 +26,8 @@ namespace Assets.Data {
         public Types Type { get; set; }
         [ProtoMember(2)]
         public List<String> BodyTypes { get; set; }
+        [ProtoMember(3, IsRequired=true)]
+        public long Time = DateTime.Now.Ticks;
 
         public override string ToString() {
             return "Response: " + Type;
