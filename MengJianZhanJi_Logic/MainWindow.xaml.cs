@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -26,21 +27,21 @@ namespace MengJianZhanJi_Logic {
             Debug.W = this;
             LogUtils.Impl = this;
         }
-
+        
         private void Button_Click(object sender, RoutedEventArgs e) {
-            NetHelper.SetUpServer();
+            NetUtils.SetUpServer();
         }
 
         private void Button_Click_1(object sender, RoutedEventArgs e) {
-            NetHelper.Shutdown();
+            NetUtils.Shutdown();
         }
 
         private void Button_Click_2(object sender, RoutedEventArgs e) {
-            NetHelper.Join("127.0.0.1", new Assets.Data.ClientInfo { Name="User"});
+            NetUtils.Join("127.0.0.1","User");
         }
 
         private void Button_Click_3(object sender, RoutedEventArgs e) {
-            NetHelper.Start();
+            NetUtils.Server.Start();
         }
 
         public void LogServer(string s) {
@@ -80,10 +81,9 @@ namespace MengJianZhanJi_Logic {
         }
 
         protected override void OnClosed(EventArgs e) {
-            NetHelper.Shutdown();
+            NetUtils.Shutdown();
+            Thread.Sleep(5000);
             base.OnClosed(e);            
         }
     }
-
-
 }

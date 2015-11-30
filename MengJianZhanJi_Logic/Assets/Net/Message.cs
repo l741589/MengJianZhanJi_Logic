@@ -51,15 +51,13 @@ namespace Assets.Net {
         }
     }
 
-    public class ClientHandler {
+    public class ClientHandler : NetHelper{
 
         public Data.ClientInfo ClientInfo { get; set; }
-        public TcpClient Client { get; private set; }
-        public Socket Sock { get { return Client.Client; } }
         public int Index { get { return ClientInfo.Index; } }
-        public ClientHandler(TcpClient client) {
-            this.Client = client;
-            this.ClientInfo = NetHelper.Recv<Data.ClientInfo>(Sock);
+        public ClientHandler(Server server, TcpClient client) 
+            : base(client, server.SendLooper, server.RecvLooper) {
+            this.ClientInfo = Recv<Data.ClientInfo>();
             Client.ReceiveTimeout = 30000;
             Client.SendTimeout = 5000;
             LogUtils.LogServer(this.ClientInfo.Name + " joined");

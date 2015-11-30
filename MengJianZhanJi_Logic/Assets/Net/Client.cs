@@ -13,14 +13,12 @@ using System.Threading;
 using UnityEngine;
 
 namespace Assets.Net {
-    class Client {
+    public class Client : NetHelper{
         static Client() {
             InitHanlders();
         }
 
-        private TcpClient TcpClient { get; set; }
         private bool isRunning = true;
-        public Socket Sock { get { return TcpClient.Client; } }
         public Data.ClientInfo Info { get; private set; }
         public Status Status { get; private set; }
         public UserStatus MyStatus { get { return Status.UserStatus[Info.Index]; } }
@@ -33,58 +31,69 @@ namespace Assets.Net {
         private Action<Data.RequestHeader> response;
 
 
-        public Client(String ip,Data.ClientInfo info) {
-            TcpClient = new TcpClient();
-            Info=info;
-            TcpClient.Connect(ip, NetHelper.Port);
+        public Client(String ip, Data.ClientInfo info)
+            : base(new TcpClient()) {
+            Info = info;
+            Client.Connect(ip, NetUtils.Port);
         }
 
         public void Loop() {
-            NetHelper.Send(Sock, Info);
-            isRunning = true;
-            while (isRunning) {
+            RecvLooper.Post(() => {
                 try {
-                    Data.RequestHeader header = NetHelper.Recv<Data.RequestHeader>(Sock);
-                    LogUtils.LogClient(header.ToString());
-                    object[] requestBody;
-                    var types = header.BodyTypes;
-                    if (types != null) {
-                        int count = types.Count();
-                        requestBody = new object[count];
-                        for (int i = 0; i < count; ++i) {
-                            Type type = Type.GetType(types[i]);
-                            requestBody[i] = NetHelper.Recv(Sock, type);
+                    Send(Info);
+                    isRunning = true;
+                    while (isRunning) {
+                        try {
+                            Data.RequestHeader header = Recv<Data.RequestHeader>();
+                            LogUtils.LogClient(header.ToString());
+                            object[] requestBody;
+                            var types = header.BodyTypes;
+                            if (types != null) {
+                                int count = types.Count();
+                                requestBody = new object[count];
+                                for (int i = 0; i < count; ++i) {
+                                    Type type = Type.GetType(types[i]);
+                                    requestBody[i] = Recv(type);
+                                }
+                            } else {
+                                requestBody = new object[0];
+                            }
+                            RequestHandler a;
+                            if (requestDispatcher.TryGetValue(header.Type, out a)) {
+                                a(this, header, requestBody);
+                                Event.WaitOne();
+                                if (!isRunning) break;
+                                if (response != null) {
+                                    response(header);
+                                    response = null;
+                                }
+                            } else {
+                                RawResponse(header);
+                            }
+                        } catch (SocketException e) {
+                            LogUtils.LogClient(e.GetType() + ":" + e.Message);
+                        } catch (ObjectDisposedException e) {
+                            LogUtils.LogClient(e.GetType() + ":" + e.Message);
                         }
-                    } else {
-                        requestBody = new object[0];
                     }
-                    RequestHandler a;
-                    if (requestDispatcher.TryGetValue(header.Type, out a)) {
-                        a(this, header,requestBody);
-                        Event.WaitOne();
-                        if (!isRunning) break;
-                        if (response != null) {
-                            response(header);
-                            response = null;
-                        }
-                    } else {
-                        RawResponse(header);
-                    }
-                } catch (SocketException e) {
-                    LogUtils.LogClient(e.GetType()+":"+e.Message);
-                }catch(ObjectDisposedException e) {
-                    LogUtils.LogClient(e.GetType() + ":" + e.Message);
+                    LogUtils.LogClient("Client Finished");
+                } catch (Exception e) {
+                    LogUtils.LogClient("Client Crashed:" + e);
                 }
-            }
-            LogUtils.LogClient("Client Finished");
+            });
+            
         }
         ~Client() {
             Close();
         }
-        public void Close(){
+
+
+        public override void Close(){
             try {
                 isRunning = false;
-                TcpClient.Close();
+                base.Close();
+                response = null;
+                Event.Set();
                 LogUtils.LogClient("Client Shutdown");
             } catch (Exception e) {
                 LogUtils.LogClient(e.Message);
@@ -99,10 +108,6 @@ namespace Assets.Net {
             requestActionDispatcher[type] = handler;
         }
 
-        public T Recv<T>() {
-            return NetHelper.Recv<T>(Sock);
-        }
-        
         public void Response(params object[] responseBody) {
             response = header => RawResponse(header, responseBody);
             Event.Set();
@@ -113,10 +118,10 @@ namespace Assets.Net {
                 Type = header.Type,
                 BodyTypes = responseBody.Select(e => e.GetType().FullName).ToList()
             };
-            NetHelper.Send(Sock, responseHeader);
+            Send(responseHeader);
             if (responseBody != null) {
                 foreach (var e in responseBody)
-                    NetHelper.SendProtoBuf(Sock, e);
+                    Send(e);
             }
         }
 

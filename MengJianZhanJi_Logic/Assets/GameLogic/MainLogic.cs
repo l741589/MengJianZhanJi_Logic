@@ -9,19 +9,19 @@ using UnityEngine;
 using Assets.Utility;
 using Assets.Data;
 namespace Assets.GameLogic {
-  
+
 
 
     public class MainState : State {
         public MainState(StateEnvironment env) : base(env) { }
 
-        public override State Run() {   
+        public override State Run() {
             RunSub(new GameStartState());
             return null;
         }
     }
 
-    public class GameStartState : State{
+    public class GameStartState : State {
         public override State Run() {
             for (int i = 0; i < Clients.Length; ++i) Clients[i].ClientInfo.Index = i;
             Status.Stack = new LinkedList<int>();
@@ -32,10 +32,10 @@ namespace Assets.GameLogic {
                     Index = i,
                     Camp = 0,
                     Hp = 3,
-                    MaxHp=4,
-                    Cards=new List<int>(),
+                    MaxHp = 4,
+                    Cards = new List<int>(),
                     Equip = new List<int>(),
-                    Buff=new List<int>()
+                    Buff = new List<int>()
                 };
             }
             BatchRequest(client => new MessageContext(client, T.GameStart, client.ClientInfo));
@@ -70,7 +70,7 @@ namespace Assets.GameLogic {
         public override State Run() {
             BatchRequest(client => new MessageContext(client,
                 new Data.ActionDesc {
-                    ActionType=ActionType.AT_DRAW_CARD,
+                    ActionType = ActionType.AT_DRAW_CARD,
                     User = client.Index,
                     Cards = DrawCard(Status.UserStatus[client.Index], 4).ToList()
                 }));
@@ -96,21 +96,7 @@ namespace Assets.GameLogic {
         }
 
         public void Start(ClientHandler[] clients) {
-
-            StateEnvironment env = new StateEnvironment {
-                Clients = clients,
-                Random = new Random(),
-                Server = server,
-                Status = new Status()
-            };
-            new MainState(env).Next();
+            
         }
-
-     
-
-        
-       
-        
-
     }
 }

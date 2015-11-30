@@ -54,14 +54,17 @@ namespace Assets.GameLogic {
         public UserStatus CurrentUser { get { return env.CurrentUser; } }
         public object Result { get; protected set; }
         public ParentState ParentState { get; private set; }
+        public bool IsClosed { get; private set; }
+        public State CurrentSub { get; private set;}
 
         public abstract State Run();
 
-        public State() { Parent = null; }
+        public State():this(null) {}
 
         public State(StateEnvironment env) {
             this.env = env;
             Parent = null;
+            IsClosed = false;
         }
 
         public State Next() {
@@ -70,6 +73,7 @@ namespace Assets.GameLogic {
             LogUtils.LogServer(">>>"+this);
             State ret = Run();
             LogUtils.LogServer("<<<" + this);
+            if (IsClosed) return null;
             if (ParentState != null) {
                 if (Depth >= ParentState.ToDepth) {
                     ret=ParentState.State;
@@ -93,9 +97,9 @@ namespace Assets.GameLogic {
             object result = null;
             var i = entry;
             while (i!=null) {
-                var j = i;
-                i = j.Next();
-                result = j.Result;
+                CurrentSub = i;
+                i = CurrentSub.Next();
+                result = CurrentSub.Result;
                 if (i is ParentState) {
                     this.ParentState = i as ParentState;
                     break;
@@ -118,6 +122,11 @@ namespace Assets.GameLogic {
                 if (Parent == null) return 0;
                 return Parent.Depth + 1;
             }
+        }
+
+        public void Close() {
+            if (CurrentSub != null) CurrentSub.Close();
+            IsClosed = true;
         }
     }
 

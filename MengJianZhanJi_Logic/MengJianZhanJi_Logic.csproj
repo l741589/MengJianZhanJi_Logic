@@ -68,6 +68,7 @@
     <Compile Include="Assets\GameLogic\StateMachine.cs" />
     <Compile Include="Assets\Data\Status.cs" />
     <Compile Include="Assets\Data\Protocol.cs" />
+    <Compile Include="Assets\Net\Looper.cs" />
     <Compile Include="Assets\Net\Message.cs" />
     <Compile Include="Assets\Utility\IOUtils.cs" />
     <Compile Include="Assets\Utility\LogUtils.cs" />

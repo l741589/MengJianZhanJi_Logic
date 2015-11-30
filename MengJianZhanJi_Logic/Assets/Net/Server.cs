@@ -1,6 +1,9 @@
-﻿using Assets.Utility;
+﻿using Assets.Data;
+using Assets.GameLogic;
+using Assets.Utility;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -15,10 +18,18 @@ namespace Assets.Net {
         private List<ClientHandler> clients=new List<ClientHandler>();
         private Action onServerStarted;
         private int state=0;   
-        public int State { get { return state; } }     
+        public int State { get { return state; } }
+        public Looper RecvLooper { get; private set; }
+        public Looper SendLooper { get; private set; }
+        private State StateMachine;
 
         public Server(Action onStarted) {
             this.onServerStarted = onStarted;
+            RecvLooper = new Looper();
+            RecvLooper.StartNewThread("ServerRecvLooper");
+            SendLooper = new Looper();
+            SendLooper.StartNewThread("ServerSendLooper");
+
             Loom.RunAsync(() => {
                 try {
                     Work();
@@ -26,7 +37,7 @@ namespace Assets.Net {
                     LogUtils.LogServer("Server Crashed:" + e);
                     listener = null;
                 }
-            });          
+            }).Name="Listener Thread";
         }
 
         ~Server() {
@@ -35,17 +46,18 @@ namespace Assets.Net {
 
         public void Close(){
             state = -1;
-            foreach (var e in clients) e.Sock.Close();
+            foreach (var e in clients) e.Close();
             if (listener != null) {
                 listener.Server.Close();
                 listener.Stop();
             }
+            if (StateMachine != null) StateMachine.Close();
             LogUtils.LogServer("Server Shutdown");
         }
 
         private void Work() {
             state = 0;
-            listener = new TcpListener(IPAddress.Any, NetHelper.Port);
+            listener = new TcpListener(IPAddress.Any, NetUtils.Port);
             listener.Server.SendTimeout=listener.Server.ReceiveTimeout = 5000;
             listener.Start();
 
@@ -54,14 +66,14 @@ namespace Assets.Net {
             while (state==0) {
                 try { 
                     TcpClient client = listener.AcceptTcpClient();
-                    clients.Add(new ClientHandler(client));
+                    clients.Add(new ClientHandler(this,client));
                 } catch (SocketException e) {
                     LogUtils.LogServer("Listen:"+e.Message);
                 } catch (ObjectDisposedException e) {
                     LogUtils.LogClient(e.GetType() + ":" + e.Message);
                 }
             }
-            LogUtils.LogServer("Server WorkThread Finish");
+            LogUtils.LogServer("Listener Thread Finish");
         }
 
 
@@ -84,20 +96,20 @@ namespace Assets.Net {
                     Type = e.type,
                     BodyTypes = e.requestBody.Select(i => i.GetType().FullName).ToList()
                 };
-                NetHelper.Send(e.client.Sock, e.request);
+                e.client.Send(e.request);
                 foreach (var obj in e.requestBody) {
-                    NetHelper.Send(e.client.Sock, obj);
+                    e.client.Send(obj);
                 }
             }
             foreach (var e in contexts) {
-                e.response = NetHelper.Recv<Data.ResponseHeader>(e.client.Sock);
+                e.response = e.client.Recv<Data.ResponseHeader>();
                 var types = e.response.BodyTypes;
                 if (types != null) {
                     int count = types.Count();
                     e.responseBody = new object[count];
                     for (int i = 0; i < count; ++i) {
                         Type type = Type.GetType(types[i]);
-                        e.responseBody[i] = NetHelper.Recv(e.client.Sock, type);
+                        e.responseBody[i] = e.client.Recv(type);
                     }
                 } else {
                     e.responseBody = new object[0];
@@ -116,20 +128,20 @@ namespace Assets.Net {
                     Type = e.type,
                     BodyTypes=e.requestBody.Select(i=>i.GetType().FullName).ToList()
                 };
-                NetHelper.Send(e.client.Sock, e.request);
+                e.client.SendAsync(e.request);
                 foreach (var obj in e.requestBody) {
-                    NetHelper.Send(e.client.Sock, obj);
+                    e.client.SendAsync(obj);
                 }
             }
             foreach (var e in contexts) {
-                e.response = NetHelper.Recv<Data.ResponseHeader>(e.client.Sock);
+                e.response = e.client.Recv<Data.ResponseHeader>();
                 var types = e.response.BodyTypes;
                 if (types != null) {
                     int count = types.Count();
                     e.responseBody = new object[count];
                     for (int i = 0; i < count; ++i) {
                         Type type = Type.GetType(types[i]);
-                        e.responseBody[i] = NetHelper.Recv(e.client.Sock, type);
+                        e.responseBody[i] = e.client.Recv(type);
                     }
                 } else {
                     e.responseBody = new object[0];
@@ -145,14 +157,25 @@ namespace Assets.Net {
             state = 1;
             Loom.RunAsync(() => {
                 try {
-                    GameLogic.MainLogic logic = new GameLogic.MainLogic(this);
-                    logic.Start(clients.ToArray());
+                    StateEnvironment env = new StateEnvironment {
+                        Clients = clients.ToArray(),
+                        Random = new Random(),
+                        Server = this,
+                        Status = new Status()
+                    };
+                    StateMachine = new MainState(env);
+                    StateMachine.Next();
                 }catch(SocketException e) {
                     LogUtils.LogServer(e.Message);
                 } catch (ObjectDisposedException e) {
-                    LogUtils.LogClient(e.GetType() + ":" + e.Message);
+                    LogUtils.LogServer(e.GetType() + ":" + e.Message);
+                }catch(IOException e) {
+                    LogUtils.LogServer(e.Message);
+                }catch(ThreadInterruptedException e) {
+                    LogUtils.LogServer(e.Message);
                 }
-            });
+                LogUtils.LogServer("Logic Thread Finished");
+            }).Name="LogicThread";
         }       
     }
 }
