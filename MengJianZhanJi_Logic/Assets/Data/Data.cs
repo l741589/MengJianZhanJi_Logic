@@ -8,13 +8,17 @@ namespace Assets.Data {
 
     [ProtoContract]
     public class RequestHeader {
+        private static long sidCounter = 0;
+
         [ProtoMember(1)]
         public Types Type { get; set; }
         [ProtoMember(2)]
         public List<String> BodyTypes { get; set; }
         [ProtoMember(3, IsRequired = true)]
         public long Time = DateTime.Now.Ticks;
-
+        [ProtoMember(4, IsRequired = true)]
+        public long Sid = sidCounter++;
+        
         public override string ToString() {
             return "Request: " + Type;
         }
@@ -28,6 +32,8 @@ namespace Assets.Data {
         public List<String> BodyTypes { get; set; }
         [ProtoMember(3, IsRequired=true)]
         public long Time = DateTime.Now.Ticks;
+        [ProtoMember(4, IsRequired = true)]
+        public long Sid { get; set; }
 
         public override string ToString() {
             return "Response: " + Type;

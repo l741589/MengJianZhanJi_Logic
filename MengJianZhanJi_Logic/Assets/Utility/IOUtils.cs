@@ -9,7 +9,12 @@ namespace Assets.Utility {
     public static class IOUtils {
         public static String ReadStringFromFile(string name) {
 #if WPF
-            return File.ReadAllText("Assets/"+name);
+            var s = "Assets/" + name;
+            try {
+                return File.ReadAllText(s);
+            } catch (IOException) {
+                return null;
+            }
 #endif
         }
 

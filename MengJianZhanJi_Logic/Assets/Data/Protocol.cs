@@ -19,6 +19,8 @@ namespace Assets.Data {
         Action,
         [ProtoEnum]
         SyncStatus,
+        [ProtoEnum]
+        TruncateMessage,
     }
 
 }

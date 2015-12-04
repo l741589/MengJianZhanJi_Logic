@@ -8,7 +8,9 @@ using Data = Assets.Data;
 using UnityEngine;
 using Assets.Utility;
 using Assets.Data;
-namespace Assets.GameLogic {
+using Assets.NetServer;
+
+namespace Assets.NetServer {
 
 
 
@@ -55,10 +57,10 @@ namespace Assets.GameLogic {
                     Status.Roles.RemoveFirst();
                 }
                 return new MessageContext(client, T.PickRole, new Data.ListAdapter<int>(ss)) {
-                    handler = cx => {
-                        int role = cx.responseBody[0] as Data.TypeAdapter<int>;
-                        Status.UserStatus[cx.client.ClientInfo.Index].Role = role;
-                        Log(cx.client, "picked role: {0}", role);
+                    Handler = cx => {
+                        int role = cx.ResponseBody[0] as Data.TypeAdapter<int>;
+                        Status.UserStatus[cx.Client.ClientInfo.Index].Role = role;
+                        Log(cx.Client, "picked role: {0}", role);
                     }
                 };
             });

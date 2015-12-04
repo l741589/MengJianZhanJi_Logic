@@ -1,5 +1,6 @@
 ﻿using Assets.Data;
 using Assets.Net;
+using Assets.NetServer;
 using Assets.Utility;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Assets.GameLogic {
+namespace Assets.NetServer {
     public interface IStateEnvironment {
         ClientHandler[] Clients { get; }
         ClientHandler CurrentClient { get; }
@@ -155,7 +156,7 @@ namespace Assets.GameLogic {
             MessageContext[] cs = new MessageContext[l];
             for (int i = 0; i < l; ++i) {
                 cs[i] = creator(Clients[i]);
-                if (handler != null) cs[i].handler = handler;
+                if (handler != null) cs[i].Handler = handler;
             }
             return cs;
         }
@@ -167,7 +168,7 @@ namespace Assets.GameLogic {
         public int[] DrawCard(UserStatus user,int count = 1) {
             int[] ret = new int[count];
             for (int i = 0; i < count; ++i) {
-                if (Status.Stack.IsEmpty()) WashCards();
+                if (Status.Stack.IsEmpty()) Shuffle();
                 ret[i] = Status.Stack.List.First();
                 Status.Stack.List.RemoveFirst();
             }
@@ -175,10 +176,21 @@ namespace Assets.GameLogic {
             return ret;
         }
 
-        public void WashCards() {
+        public void Shuffle() {
             Status.Stack.Clear();
             foreach (var i in G.Cards.Keys) Status.Stack.List.AddLast(i);
             Mix(Status.Stack.List);
+            String s = IOUtils.ReadStringFromFile("Cheat.txt");
+            if (s == null) return;
+            LogUtils.LogServer("出千中");
+            String[] ss = s.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var i in ss) {
+                int x;
+                if (int.TryParse(i,out x)){
+                    if (Status.Stack.List.Remove(x))
+                        Status.Stack.List.AddFirst(x);
+                }
+            }
         }
 
         public void SyncStatus() {

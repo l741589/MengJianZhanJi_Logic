@@ -63,13 +63,16 @@
     <Compile Include="Assets\Data\CardFace.cs" />
     <Compile Include="Assets\Data\G.cs" />
     <Compile Include="Assets\Data\PrivateList.cs" />
-    <Compile Include="Assets\GameLogic\GameLogic.cs" />
-    <Compile Include="Assets\GameLogic\MainLogic.cs" />
-    <Compile Include="Assets\GameLogic\StateMachine.cs" />
+    <Compile Include="Assets\NetClient\RequestHandler.cs" />
+    <Compile Include="Assets\NetServer\AskForCard.cs" />
+    <Compile Include="Assets\NetServer\GameLogic.cs" />
+    <Compile Include="Assets\NetServer\MainLogic.cs" />
+    <Compile Include="Assets\NetServer\StateMachine.cs" />
     <Compile Include="Assets\Data\Status.cs" />
     <Compile Include="Assets\Data\Protocol.cs" />
-    <Compile Include="Assets\Net\Looper.cs" />
-    <Compile Include="Assets\Net\Message.cs" />
+    <Compile Include="Assets\NetClient\MessageContext.cs" />
+    <Compile Include="Assets\Utility\Looper.cs" />
+    <Compile Include="Assets\NetServer\Message.cs" />
     <Compile Include="Assets\Utility\IOUtils.cs" />
     <Compile Include="Assets\Utility\LogUtils.cs" />
     <Compile Include="Assets\Utility\Util.cs" />
@@ -84,10 +87,10 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Assets\Net\Client.cs" />
+    <Compile Include="Assets\NetClient\Client.cs" />
     <Compile Include="Assets\Data\Data.cs" />
     <Compile Include="Assets\Net\NetHelper.cs" />
-    <Compile Include="Assets\Net\Server.cs" />
+    <Compile Include="Assets\NetServer\Server.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -124,6 +127,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\Cheat.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <Compile Include="Assets\NetServer\Stages.cs" />
     <Content Include="protobuf-net.dll" />
   </ItemGroup>
   <ItemGroup />

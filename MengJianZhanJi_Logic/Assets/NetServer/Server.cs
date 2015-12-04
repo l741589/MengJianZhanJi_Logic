@@ -1,5 +1,5 @@
 ﻿using Assets.Data;
-using Assets.GameLogic;
+using Assets.Net;
 using Assets.Utility;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 
-namespace Assets.Net {
+namespace Assets.NetServer {
 
     public class Server {
         private TcpListener listener;
@@ -29,7 +29,6 @@ namespace Assets.Net {
             RecvLooper.StartNewThread("ServerRecvLooper");
             SendLooper = new Looper();
             SendLooper.StartNewThread("ServerSendLooper");
-
             Loom.RunAsync(() => {
                 try {
                     Work();
@@ -91,71 +90,32 @@ namespace Assets.Net {
         }
 
         public void RequestFirst(params MessageContext[] contexts) {
-            foreach (var e in contexts) {
-                e.request = new Data.RequestHeader() {
-                    Type = e.type,
-                    BodyTypes = e.requestBody.Select(i => i.GetType().FullName).ToList()
-                };
-                e.client.Send(e.request);
-                foreach (var obj in e.requestBody) {
-                    e.client.Send(obj);
-                }
+            foreach (var e in contexts) e.Send();
+            while (true) {
+                foreach (var e in contexts) 
+                    if (e.TryRecv()) goto SUCCESS;
+                Thread.Sleep(100);
             }
+            SUCCESS:
             foreach (var e in contexts) {
-                e.response = e.client.Recv<Data.ResponseHeader>();
-                var types = e.response.BodyTypes;
-                if (types != null) {
-                    int count = types.Count();
-                    e.responseBody = new object[count];
-                    for (int i = 0; i < count; ++i) {
-                        Type type = Type.GetType(types[i]);
-                        e.responseBody[i] = e.client.Recv(type);
-                    }
+                if (e.IsRecved) {
+                    LogUtils.LogServer(e.Client + e.Response.ToString());
+                    if (e.Handler != null) e.Handler(e);
                 } else {
-                    e.responseBody = new object[0];
-                }
 
-            }
-            foreach (var e in contexts) {
-                LogUtils.LogServer(e.client + e.response.ToString());
-                if (e.handler != null) e.handler(e);
+                }                
             }
         }
 
         public void Request(params MessageContext[] contexts) {
-            foreach (var e in contexts) {
-                e.request = new Data.RequestHeader() {
-                    Type = e.type,
-                    BodyTypes=e.requestBody.Select(i=>i.GetType().FullName).ToList()
-                };
-                e.client.SendAsync(e.request);
-                foreach (var obj in e.requestBody) {
-                    e.client.SendAsync(obj);
-                }
-            }
-            foreach (var e in contexts) {
-                e.response = e.client.Recv<Data.ResponseHeader>();
-                var types = e.response.BodyTypes;
-                if (types != null) {
-                    int count = types.Count();
-                    e.responseBody = new object[count];
-                    for (int i = 0; i < count; ++i) {
-                        Type type = Type.GetType(types[i]);
-                        e.responseBody[i] = e.client.Recv(type);
-                    }
-                } else {
-                    e.responseBody = new object[0];
-                }
-            }
-            foreach (var e in contexts) {
-                LogUtils.LogServer(e.client+e.response.ToString());
-                if (e.handler != null) e.handler(e);
-            }
+            foreach (var e in contexts) e.Send();
+            foreach (var e in contexts) e.Recv();
+            foreach (var e in contexts) e.Handle();
         }
 
         public void Start() {
             state = 1;
-            Loom.RunAsync(() => {
+            RecvLooper.Post(() => {
                 try {
                     StateEnvironment env = new StateEnvironment {
                         Clients = clients.ToArray(),
@@ -165,17 +125,17 @@ namespace Assets.Net {
                     };
                     StateMachine = new MainState(env);
                     StateMachine.Next();
-                }catch(SocketException e) {
+                } catch (SocketException e) {
                     LogUtils.LogServer(e.Message);
                 } catch (ObjectDisposedException e) {
                     LogUtils.LogServer(e.GetType() + ":" + e.Message);
-                }catch(IOException e) {
+                } catch (IOException e) {
                     LogUtils.LogServer(e.Message);
-                }catch(ThreadInterruptedException e) {
+                } catch (ThreadInterruptedException e) {
                     LogUtils.LogServer(e.Message);
                 }
                 LogUtils.LogServer("Logic Thread Finished");
-            }).Name="LogicThread";
+            });
         }       
     }
 }

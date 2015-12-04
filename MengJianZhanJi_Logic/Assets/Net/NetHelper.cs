@@ -1,4 +1,6 @@
 ﻿using Assets.Data;
+using Assets.NetClient;
+using Assets.NetServer;
 using Assets.Utility;
 using ProtoBuf;
 using System;
