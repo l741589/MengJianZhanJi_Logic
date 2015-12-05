@@ -1,15 +1,15 @@
-﻿using Assets.Data;
-using Assets.Utility;
+﻿using Assets.data;
+using Assets.utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using T = Assets.Data.Types;
-namespace Assets.NetServer {
+using T = Assets.data.Types;
+namespace Assets.server {
     public class AskForCardState : State {
-        private int user;
-        private List<int> card;
-        private ActionDesc askResult;
+        protected int user;
+        protected List<int> card;
+        protected ActionDesc askResult;
 
         public AskForCardState(int user, params int[] card)
             : this(user, card.ToList()) {
@@ -32,42 +32,44 @@ namespace Assets.NetServer {
                 return null;
             }
             SyncStatus();
-
-            var action = new ActionDesc(ActionType.AT_ASK_CARD) {
-                User = user,
-                Cards = card,
-            };
-            List<int> copy = new List<int>(card);
-            BatchRequest(c => new MessageContext(c, action), cx => {
-                if (cx.Client.Index == user) {
-                    askResult = cx.getResponse<ActionDesc>(0);
-                    LogUtils.Assert(askResult != null);
-                }
-            });
+            
+            DoRequest();
             LogUtils.Assert(askResult != null);
+            List<int> copy = new List<int>(card);
             if (askResult.ActionType != ActionType.AT_USE_CARD) {
                 //TODO 有可能的其他操作，比如技能
-                goto FAIL;
+                return OnFail(copy);
             }
-            if (askResult.Cards == null) goto FAIL;
+
+            if (askResult.Cards == null) return OnFail(copy);
 
 
             foreach (var i in askResult.Cards.List) {
-                if (!Utility.Util.RemoveIf(copy, j => G.Cards[i].Face == j)) {
-                    goto FAIL;
+                if (!utility.Util.RemoveIf(copy, j => G.Cards[i].Face == j)) {
+                    return OnFail(copy);
                 }
             }
-            if (copy.Count > 0) goto HALF;
-            SUCCESS:
+            if (copy.Count > 0) return OnHalf(copy);
+            return OnSuccess(copy);
+        }
+
+        public virtual State OnSuccess(List<int> copy){
             askResult.Arg1 = 1;
             foreach (var i in askResult.Cards.List) Status.UserStatus[askResult.User].Cards.Remove(i);
             Broadcast(askResult);
             askResult.Cards = copy;
             Result = askResult;
             return null;
-            HALF:
-            return new AskForCardState(user, copy);
-            FAIL:
+        }
+
+        public virtual State OnHalf(List<int> copy) {
+            foreach (var i in askResult.Cards.List) Status.UserStatus[askResult.User].Cards.Remove(i);
+            card = copy;
+            askResult = null;
+            return this;
+        }
+
+        public virtual State OnFail(List<int> copy){
             askResult.Arg1 = 0;
             askResult.Cards = copy;
             Server.Request(Clients[askResult.User], T.Action, new ActionDesc {
@@ -78,26 +80,45 @@ namespace Assets.NetServer {
             Result = askResult;
             return null;
         }
+
+        public virtual void DoRequest(){
+            var action = new ActionDesc(ActionType.AT_ASK_CARD) {
+                User = user,
+                Cards = card,
+            };
+            BatchRequest(c => new MessageContext(c, action), cx => {
+                if (cx.Client.Index == user) {
+                    askResult = cx.GetRes<ActionDesc>(0);
+                    LogUtils.Assert(askResult != null);
+                }
+            });
+        }
     }
 
-    public class AskForCardSyncAll : State {
-
-        private int user;
-        private List<int> card;
-        private ActionDesc askResult;
+    public class AskForCardSyncAll : AskForCardState {
 
         public AskForCardSyncAll(int user, params int[] card)
-            : this(user, card.ToList()) {
+            : base(user, card) {
 
         }
 
-        public AskForCardSyncAll(int user, List<int> card) {
-            this.user = user;
-            this.card = card;
+        public AskForCardSyncAll(int user, List<int> card)
+            : base(user, card) {
+
         }
 
-        public override State Run() {
-            return null;
+        public override void DoRequest() {
+            BatchRequestOne(c => new MessageContext(c, new ActionDesc(ActionType.AT_ASK_CARD) {
+                User = user,
+                Cards = card
+            }), c => {
+                if (c.ResponseHeader.Type != T.Action) return;
+                askResult = c.GetRes<ActionDesc>();
+            });
+        }
+
+        public override State OnSuccess(List<int> copy) {
+            return base.OnSuccess(copy);
         }
     }
 

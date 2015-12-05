@@ -58,24 +58,25 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Assets\Data\ActionDesc.cs" />
-    <Compile Include="Assets\Data\BaseType.cs" />
-    <Compile Include="Assets\Data\CardFace.cs" />
-    <Compile Include="Assets\Data\G.cs" />
-    <Compile Include="Assets\Data\PrivateList.cs" />
-    <Compile Include="Assets\NetClient\RequestHandler.cs" />
-    <Compile Include="Assets\NetServer\AskForCard.cs" />
-    <Compile Include="Assets\NetServer\GameLogic.cs" />
-    <Compile Include="Assets\NetServer\MainLogic.cs" />
-    <Compile Include="Assets\NetServer\StateMachine.cs" />
-    <Compile Include="Assets\Data\Status.cs" />
-    <Compile Include="Assets\Data\Protocol.cs" />
-    <Compile Include="Assets\NetClient\MessageContext.cs" />
-    <Compile Include="Assets\Utility\Looper.cs" />
-    <Compile Include="Assets\NetServer\Message.cs" />
-    <Compile Include="Assets\Utility\IOUtils.cs" />
-    <Compile Include="Assets\Utility\LogUtils.cs" />
-    <Compile Include="Assets\Utility\Util.cs" />
+    <Compile Include="Assets\data\ActionDesc.cs" />
+    <Compile Include="Assets\data\BaseType.cs" />
+    <Compile Include="Assets\data\CardFace.cs" />
+    <Compile Include="Assets\data\G.cs" />
+    <Compile Include="Assets\data\PrivateList.cs" />
+    <Compile Include="Assets\client\RequestDispatcher.cs" />
+    <Compile Include="Assets\server\AskForCard.cs" />
+    <Compile Include="Assets\server\GameLogic.cs" />
+    <Compile Include="Assets\server\MainLogic.cs" />
+    <Compile Include="Assets\server\StateMachine.cs" />
+    <Compile Include="Assets\data\Status.cs" />
+    <Compile Include="Assets\data\Protocol.cs" />
+    <Compile Include="Assets\client\MessageContext.cs" />
+    <Compile Include="Assets\server\UsingCard.cs" />
+    <Compile Include="Assets\utility\Looper.cs" />
+    <Compile Include="Assets\server\Message.cs" />
+    <Compile Include="Assets\utility\IOUtils.cs" />
+    <Compile Include="Assets\utility\LogUtils.cs" />
+    <Compile Include="Assets\utility\Util.cs" />
     <Compile Include="UnityEngine\Debug.cs" />
     <Compile Include="UnityEngine\Loom.cs" />
     <Compile Include="UnityEngine\MonoBehaviour.cs" />
@@ -87,10 +88,10 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Assets\NetClient\Client.cs" />
-    <Compile Include="Assets\Data\Data.cs" />
-    <Compile Include="Assets\Net\NetHelper.cs" />
-    <Compile Include="Assets\NetServer\Server.cs" />
+    <Compile Include="Assets\client\Client.cs" />
+    <Compile Include="Assets\data\Data.cs" />
+    <Compile Include="Assets\net\NetHelper.cs" />
+    <Compile Include="Assets\server\Server.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -130,7 +131,7 @@
     <None Include="Assets\Cheat.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <Compile Include="Assets\NetServer\Stages.cs" />
+    <Compile Include="Assets\server\Stages.cs" />
     <Content Include="protobuf-net.dll" />
   </ItemGroup>
   <ItemGroup />

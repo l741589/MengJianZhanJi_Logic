@@ -1,15 +1,15 @@
-﻿using Assets.Data;
-using Assets.Net;
-using Assets.NetServer;
-using Assets.Utility;
+﻿using Assets.data;
+using Assets.net;
+using Assets.server;
+using Assets.utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using T = Assets.Data.Types;
+using T = Assets.data.Types;
 
-namespace Assets.NetServer {
+namespace Assets.server {
     
     public class DyingState : State {
         private int user;

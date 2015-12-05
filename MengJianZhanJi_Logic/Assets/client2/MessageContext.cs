@@ -1,11 +1,11 @@
-﻿using Assets.Data;
-using Assets.Utility;
+﻿using Assets.data;
+using Assets.utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Assets.NetClient {
+namespace Assets.client {
     public class MessageContext {
         public Client Client;
         public RequestHeader RequestHeader;
@@ -13,9 +13,9 @@ namespace Assets.NetClient {
         public ResponseHeader ResponseHeader;
         public object[] ResponseBody;
 
-        public Data.UserStatus MyStatus { get { return Client.MyStatus; } }
-        public Data.Status Status { get { return Client.Status; } }
-        public Data.ClientInfo Info { get { return Client.Info; } }
+        public data.UserStatus MyStatus { get { return Client.MyStatus; } }
+        public data.Status Status { get { return Client.Status; } }
+        public data.ClientInfo Info { get { return Client.Info; } }
         
 
         public static MessageContext NewRecv(Client client) {
@@ -29,7 +29,7 @@ namespace Assets.NetClient {
         }
 
         public void Recv() {
-            RequestHeader = Client.Recv<Data.RequestHeader>();
+            RequestHeader = Client.Recv<data.RequestHeader>();
             LogUtils.LogClient(RequestHeader.ToString());
             var types = RequestHeader.BodyTypes;
             if (types != null) {
@@ -46,7 +46,7 @@ namespace Assets.NetClient {
 
 
         public void Response(params object[] responseBody) {
-            ResponseHeader = new Data.ResponseHeader {
+            ResponseHeader = new data.ResponseHeader {
                 Type = RequestHeader.Type,
                 BodyTypes = responseBody.Select(e => e.GetType().FullName).ToList(),
                 Sid = RequestHeader.Sid,
@@ -60,7 +60,7 @@ namespace Assets.NetClient {
             }
         }
 
-        public T ReqBody<T>(int index = 0) where T :class{
+        public T GetReq<T>(int index = 0) where T :class{
             if (index >= RequestBody.Length) return null;
             var o = RequestBody[index];
             return o as T;

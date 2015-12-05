@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Assets.Data {
+namespace Assets.data {
     [ProtoContract]
     public class KeyValuePair {
         [ProtoMember(1)]

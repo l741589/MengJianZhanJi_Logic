@@ -5,7 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
-namespace Assets.Data {
+namespace Assets.data {
     [ProtoContract]
     public enum ActionType {
         AT_CANCEL,

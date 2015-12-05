@@ -1,7 +1,7 @@
-﻿using Assets.Data;
-using Assets.NetClient;
-using Assets.NetServer;
-using Assets.Utility;
+﻿using Assets.data;
+using Assets.client;
+using Assets.server;
+using Assets.utility;
 using ProtoBuf;
 using System;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 
-namespace Assets.Net {
+namespace Assets.net {
 
     public static class NetUtils {
         public static int Port = 32789;

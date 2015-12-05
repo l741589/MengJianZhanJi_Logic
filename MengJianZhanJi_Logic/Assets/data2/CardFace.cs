@@ -1,4 +1,4 @@
-namespace Assets.Data{
+namespace Assets.data{
 	public static class CardFace{
 		/** 普列塞装甲 */
 		public const int CF_PuLieSaiZhuangJia = 5;

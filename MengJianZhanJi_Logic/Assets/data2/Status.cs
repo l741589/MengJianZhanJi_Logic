@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Assets.Data;
+using Assets.data;
 using ProtoBuf;
 
-namespace Assets.Data {
+namespace Assets.data {
 
     public class CardInfo {
         public int Id;

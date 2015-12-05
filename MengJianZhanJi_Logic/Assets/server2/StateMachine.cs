@@ -1,14 +1,14 @@
-﻿using Assets.Data;
-using Assets.Net;
-using Assets.NetServer;
-using Assets.Utility;
+﻿using Assets.data;
+using Assets.net;
+using Assets.server;
+using Assets.utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Assets.NetServer {
+namespace Assets.server {
     public interface IStateEnvironment {
         ClientHandler[] Clients { get; }
         ClientHandler CurrentClient { get; }
@@ -76,8 +76,10 @@ namespace Assets.NetServer {
             LogUtils.LogServer("<<<" + this);
             if (IsClosed) return null;
             if (ParentState != null) {
-                if (Depth >= ParentState.ToDepth) {
-                    ret=ParentState.State;
+                if (Depth <= ParentState.ToDepth) {
+                    ret = ParentState.State;
+                } else {
+                    ret = ParentState;
                 }
             }
             if (ret!=null) ret.Init(this);
@@ -163,6 +165,10 @@ namespace Assets.NetServer {
 
         public void BatchRequest(Func<ClientHandler, MessageContext> creator, ResponseHandler handler = null) {
             Server.Request(BuildContexts(creator,handler));
+        }
+
+        public void BatchRequestOne(Func<ClientHandler, MessageContext> creator, ResponseHandler handler = null) {
+            Server.RequestOne(BuildContexts(creator, handler));
         }
 
         public int[] DrawCard(UserStatus user,int count = 1) {

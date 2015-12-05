@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Assets.Utility {
+namespace Assets.utility {
     public class Looper {
         public delegate object LooperAction();
         public bool IsRunning { get; private set; }

@@ -1,16 +1,16 @@
-﻿using Assets.Net;
+﻿using Assets.net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using T = Assets.Data.Types;
-using Data = Assets.Data;
+using T = Assets.data.Types;
+using Data = Assets.data;
 using UnityEngine;
-using Assets.Utility;
-using Assets.Data;
-using Assets.NetServer;
+using Assets.utility;
+using Assets.data;
+using Assets.server;
 
-namespace Assets.NetServer {
+namespace Assets.server {
 
 
 
@@ -56,9 +56,9 @@ namespace Assets.NetServer {
                     ss.AddLast(Status.Roles.First());
                     Status.Roles.RemoveFirst();
                 }
-                return new MessageContext(client, T.PickRole, new Data.ListAdapter<int>(ss)) {
+                return new MessageContext(client, T.PickRole, new data.ListAdapter<int>(ss)) {
                     Handler = cx => {
-                        int role = cx.ResponseBody[0] as Data.TypeAdapter<int>;
+                        int role = cx.ResponseBody[0] as data.TypeAdapter<int>;
                         Status.UserStatus[cx.Client.ClientInfo.Index].Role = role;
                         Log(cx.Client, "picked role: {0}", role);
                     }
@@ -71,7 +71,7 @@ namespace Assets.NetServer {
     public class DealState : State {
         public override State Run() {
             BatchRequest(client => new MessageContext(client,
-                new Data.ActionDesc {
+                new data.ActionDesc {
                     ActionType = ActionType.AT_DRAW_CARD,
                     User = client.Index,
                     Cards = DrawCard(Status.UserStatus[client.Index], 4).ToList()

@@ -1,10 +1,10 @@
-﻿using Assets.Utility;
+﻿using Assets.utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Assets.Data {
+namespace Assets.data {
     public static class G {
         private static Dictionary<int, CardInfo> cards;
             

@@ -1,5 +1,5 @@
-﻿using Assets.Net;
-using Assets.Utility;
+﻿using Assets.net;
+using Assets.utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;

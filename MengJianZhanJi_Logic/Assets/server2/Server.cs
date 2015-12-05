@@ -1,6 +1,6 @@
-﻿using Assets.Data;
-using Assets.Net;
-using Assets.Utility;
+﻿using Assets.data;
+using Assets.net;
+using Assets.utility;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 
-namespace Assets.NetServer {
+namespace Assets.server {
 
     public class Server {
         private TcpListener listener;
@@ -76,20 +76,20 @@ namespace Assets.NetServer {
         }
 
 
-        public MessageContext Request(ClientHandler client, Data.Types type, params object[] objs) {
+        public MessageContext Request(ClientHandler client, data.Types type, params object[] objs) {
             var c = new MessageContext(client, type, objs);
             Request(c);
             return c;
         }
 
-        public void Broadcast(ClientHandler[] clients,Data.Types type, params object[] objs) {
+        public void Broadcast(ClientHandler[] clients,data.Types type, params object[] objs) {
             int len = clients.Length;
             MessageContext[] cs = new MessageContext[len];
             for (int i = 0; i < len; ++i) cs[i] = new MessageContext(clients[i], type, objs);
             Request(cs);
         }
 
-        public void RequestFirst(params MessageContext[] contexts) {
+        public void RequestOne(params MessageContext[] contexts) {
             foreach (var e in contexts) e.Send();
             while (true) {
                 foreach (var e in contexts) 
@@ -98,12 +98,16 @@ namespace Assets.NetServer {
             }
             SUCCESS:
             foreach (var e in contexts) {
+                if (!e.IsRecved) 
+                    e.Trucate();
+                
+            }
+            foreach (var e in contexts) {
                 if (e.IsRecved) {
-                    LogUtils.LogServer(e.Client + e.Response.ToString());
-                    if (e.Handler != null) e.Handler(e);
+                    e.Handle();
                 } else {
-
-                }                
+                    e.Recv();
+                }
             }
         }
 

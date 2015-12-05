@@ -1,83 +1,28 @@
-﻿using Assets.Data;
-using Assets.Net;
-using Assets.Utility;
-using ProtoBuf;
-using ProtoBuf.Meta;
+﻿using Assets.data;
+using Assets.utility;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using UnityEngine;
 
-namespace Assets.NetClient {
-    public class Client : NetHelper{
-        static Client() {
-            InitHanlders();
-        }
-
-        private bool isRunning = true;
-        public Data.ClientInfo Info { get; private set; }
-        public Status Status { get; private set; }
-        public UserStatus MyStatus { get { return Status.UserStatus[Info.Index]; } }
-
+namespace Assets.client {
+    public class RequestDispatcher {
         public delegate void RequestHandler(MessageContext c);
-        private static Dictionary<Data.Types, RequestHandler> requestDispatcher = new Dictionary<Data.Types, RequestHandler>();
         public delegate void RequestActionHandler(MessageContext c, ActionDesc a);
-        private static Dictionary<Data.ActionType, RequestActionHandler> requestActionDispatcher = new Dictionary<Data.ActionType, RequestActionHandler>();
 
+        private static Dictionary<data.Types, RequestHandler> requestDispatcher = new Dictionary<data.Types, RequestHandler>();
+        private static Dictionary<data.ActionType, RequestActionHandler> requestActionDispatcher = new Dictionary<data.ActionType, RequestActionHandler>();
 
-        public Client(String ip, Data.ClientInfo info)
-            : base(new TcpClient()) {
-            Info = info;
-            Client.Connect(ip, NetUtils.Port);
-        }
-
-        public void Loop() {
-            RecvLooper.Post(() => {
-                try {
-                    Send(Info);
-                    isRunning = true;
-                    while (isRunning) {
-                        try {
-                            MessageContext c = MessageContext.NewRecv(this);
-                            RequestHandler a;
-                            if (requestDispatcher.TryGetValue(c.RequestHeader.Type, out a)) {
-                                a(c);
-                            } else {
-                                c.Response();
-                            }
-                        } catch (SocketException e) {
-                            LogUtils.LogClient(e.GetType() + ":" + e.Message);
-                        } catch (ObjectDisposedException e) {
-                            LogUtils.LogClient(e.GetType() + ":" + e.Message);
-                        }
-                    }
-                    LogUtils.LogClient("Client Finished");
-                } catch (Exception e) {
-                    LogUtils.LogClient("Client Crashed:" + e);
-                }
-            });
-            
-        }
-        ~Client() {
-            Close();
-        }
-
-
-        public override void Close(){
-            try {
-                isRunning = false;
-                base.Close();
-                LogUtils.LogClient("Client Shutdown");
-            } catch (Exception e) {
-                LogUtils.LogClient(e.Message);
+        public static void Dispatch(MessageContext c) {
+            RequestHandler a;
+            if (requestDispatcher.TryGetValue(c.RequestHeader.Type, out a)) {
+                a(c);
+            } else {
+                c.Response();
             }
         }
 
-        public static void RegisterHandler(Data.Types type, RequestHandler handler) {
+        public static void RegisterHandler(data.Types type, RequestHandler handler) {
             requestDispatcher[type] = handler;
         }
 
@@ -85,43 +30,41 @@ namespace Assets.NetClient {
             requestActionDispatcher[type] = handler;
         }
 
-        public override string ToString() {
-            return Info.ToString();
+        public static void Log(MessageContext c, String s) {
+            LogUtils.LogClient(c.Client.ToString() + c.RequestHeader.ToString() + " : " + s);
         }
 
-        /////////////////////////////////////////////
-
-        static void InitHanlders() {
+        public static void EnableDispatchAction() {
             RegisterHandler(Types.Action, c => {
                 RequestActionHandler h;
-                var a = c.ReqBody<ActionDesc>(0);
+                var a = c.GetReq<ActionDesc>(0);
                 if (a == null) {
                     c.Response();
                     return;
                 }
                 Log(c, a.ToString());
                 if (requestActionDispatcher.TryGetValue(a.ActionType, out h)) {
-                    h(c,a);
+                    h(c, a);
                 } else {
                     c.Response();
                 }
             });
-            RegisterHandler(Data.Types.GameStart, c => {
-                c.Client.Info = c.ReqBody<ClientInfo>(0);
-                Log(c, "GameStart,UserIndex:" + c.Client.Info.Index);
-                c.Response();
-            });
-            RegisterHandler(Data.Types.PickRole, c => {
-                var l = c.ReqBody<ListAdapter<int>>();
+        }
+
+        public static void Mock() {
+            
+           
+            RegisterHandler(data.Types.PickRole, c => {
+                var l = c.GetReq<ListAdapter<int>>();
                 Log(c, String.Join(",", l.List));
-                c.Response(new Data.TypeAdapter<int>(l.List.First()));
+                c.Response(new data.TypeAdapter<int>(l.List.First()));
             });
-            RegisterHandler(Data.Types.ChangeStage, c => {
-                var s = c.ReqBody<StageChangeInfo>();
+            RegisterHandler(data.Types.ChangeStage, c => {
+                var s = c.GetReq<StageChangeInfo>();
                 Log(c, "Turn:" + s.Turn + "  Stage:" + s.Stage);
                 c.Response();
             });
-            RegisterHandler(ActionType.AT_DRAW_CARD, (c,l) => {
+            RegisterHandler(ActionType.AT_DRAW_CARD, (c, l) => {
                 LogUtils.Assert(l.ActionType == ActionType.AT_DRAW_CARD);
                 var cl = c.Client;
                 if (l.User == cl.Info.Index) {
@@ -131,15 +74,11 @@ namespace Assets.NetClient {
                 } else {
                     LogUtils.Assert(l.Cards.List == null);
                     cl.Status.UserStatus[l.User].Cards.Count += l.Cards.Count;
-                    Log(c, "UserCardCount:" + String.Join(",",cl.Status.UserStatus.Select(us => us.Cards.Count)));
-                }                
+                    Log(c, "UserCardCount:" + String.Join(",", cl.Status.UserStatus.Select(us => us.Cards.Count)));
+                }
                 c.Response();
             });
-            RegisterHandler(Data.Types.SyncStatus, c => {
-                var status = c.ReqBody<Data.Status>();
-                if (status!=null) c.Client.Status = status;
-                c.Response();
-            });
+            
             RegisterHandler(ActionType.AT_ASK, (c, a) => {
                 var cl = c.Client;
                 if (a.Arg1 == 0) {
@@ -155,8 +94,7 @@ namespace Assets.NetClient {
                                 return;
                             }
                             break;
-                        case CardFace.CF_JinJi:
-                            {
+                        case CardFace.CF_JinJi: {
                                 var user = cl.Status.Turn;
                                 while (user == cl.Status.Turn || cl.Status.UserStatus[user].IsDead)
                                     user = (user + 1) % cl.Status.UserStatus.Length;
@@ -169,8 +107,7 @@ namespace Assets.NetClient {
                                 c.Response(ad);
                                 return;
                             }
-                        case CardFace.CF_UGuoHouQin:
-                            {
+                        case CardFace.CF_UGuoHouQin: {
                                 var ad = new ActionDesc {
                                     ActionType = ActionType.AT_USE_CARD,
                                     User = c.Info.Index,
@@ -186,26 +123,26 @@ namespace Assets.NetClient {
                     ActionType = ActionType.AT_CANCEL
                 });
             });
-            RegisterHandler(ActionType.AT_ASK_CARD, (c, a)=>{
+            RegisterHandler(ActionType.AT_ASK_CARD, (c, a) => {
                 var cl = c.Client;
                 if (a.User != cl.Info.Index) {
                     c.Response();
                     return;
                 }
                 if (a.Cards.Count == 1) {
-                    foreach(var i in cl.MyStatus.Cards.List) {
+                    foreach (var i in cl.MyStatus.Cards.List) {
                         if (G.Cards[i].Face == a.Cards[0]) {
                             c.Response(new ActionDesc {
                                 ActionType = ActionType.AT_USE_CARD,
                                 User = cl.Info.Index,
-                                Cards = new int[] { i}.ToList()
+                                Cards = new int[] { i }.ToList()
                             });
                             return;
                         }
                     }
                     c.Response(new ActionDesc {
                         ActionType = ActionType.AT_USE_CARD,
-                        User=cl.Info.Index,
+                        User = cl.Info.Index,
                     });
                     return;
                 } else {
@@ -224,7 +161,7 @@ namespace Assets.NetClient {
             });
             RegisterHandler(ActionType.AT_ASK_DROP_CARD, (c, a) => {
                 var cl = c.Client;
-                c.Response(new ActionDesc(ActionType.AT_DROP_CARD) {                    
+                c.Response(new ActionDesc(ActionType.AT_DROP_CARD) {
                     User = cl.Info.Index,
                     Cards = cl.MyStatus.Cards.List.Skip(cl.MyStatus.Hp).ToList()
                 });
@@ -243,10 +180,6 @@ namespace Assets.NetClient {
                 Log(c, a.Users.Contains(c.Client.Info.Index) ? "胜利" : "失败");
                 c.Response();
             });
-        }
-
-        private static void Log(MessageContext c,String s) {
-            LogUtils.LogClient(c.Client.ToString() + c.RequestHeader.ToString() + " : " + s);
         }
     }
 }
