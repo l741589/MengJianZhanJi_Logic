@@ -71,7 +71,9 @@
     <Compile Include="Assets\data\Status.cs" />
     <Compile Include="Assets\data\Protocol.cs" />
     <Compile Include="Assets\client\MessageContext.cs" />
+    <Compile Include="Assets\server\StateUtils.cs" />
     <Compile Include="Assets\server\UsingCard.cs" />
+    <Compile Include="Assets\server\VoteState.cs" />
     <Compile Include="Assets\utility\Looper.cs" />
     <Compile Include="Assets\server\Message.cs" />
     <Compile Include="Assets\utility\IOUtils.cs" />

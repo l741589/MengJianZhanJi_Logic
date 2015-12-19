@@ -7,6 +7,7 @@ using System.Text;
 
 namespace Assets.client {
     public class RequestDispatcher {
+        private static Random Random = new Random();
         public delegate void RequestHandler(MessageContext c);
         public delegate void RequestActionHandler(MessageContext c, ActionDesc a);
 
@@ -54,10 +55,20 @@ namespace Assets.client {
         public static void Mock() {
             
            
-            RegisterHandler(data.Types.PickRole, c => {
+            /*RegisterHandler(data.Types.PickRole, c => {
                 var l = c.GetReq<ListAdapter<int>>();
                 Log(c, String.Join(",", l.List));
                 c.Response(new data.TypeAdapter<int>(l.List.First()));
+            });*/
+
+            RegisterHandler(ActionType.AT_ASK_PICK_CARD, (c,a) => {
+                if (a.User != c.MyStatus.Index) {
+                    c.Response();
+                } else {
+                    a.ActionType = ActionType.AT_PICK_CARD;
+                    a.Card = a.Cards[0];
+                    c.Response(a);
+                }
             });
             RegisterHandler(data.Types.ChangeStage, c => {
                 var s = c.GetReq<StageChangeInfo>();
@@ -107,6 +118,7 @@ namespace Assets.client {
                                 c.Response(ad);
                                 return;
                             }
+                        case CardFace.CF_BanBenGengXin:
                         case CardFace.CF_UGuoHouQin: {
                                 var ad = new ActionDesc {
                                     ActionType = ActionType.AT_USE_CARD,
@@ -129,9 +141,9 @@ namespace Assets.client {
                     c.Response();
                     return;
                 }
-                if (a.Cards.Count == 1) {
+                if (a.IsSingleCard) {
                     foreach (var i in cl.MyStatus.Cards.List) {
-                        if (G.Cards[i].Face == a.Cards[0]) {
+                        if (G.Cards[i].Face == a.SingleCard) {
                             c.Response(new ActionDesc {
                                 ActionType = ActionType.AT_USE_CARD,
                                 User = cl.Info.Index,
@@ -141,7 +153,7 @@ namespace Assets.client {
                         }
                     }
                     c.Response(new ActionDesc {
-                        ActionType = ActionType.AT_USE_CARD,
+                        ActionType = ActionType.AT_CANCEL,
                         User = cl.Info.Index,
                     });
                     return;
@@ -179,6 +191,38 @@ namespace Assets.client {
             RegisterHandler(ActionType.AT_WIN, (c, a) => {
                 Log(c, a.Users.Contains(c.Client.Info.Index) ? "胜利" : "失败");
                 c.Response();
+            });
+            RegisterHandler(ActionType.AT_ASK_RELATION, (c, a) => {
+                if (a.User != c.Info.Index) {
+                    c.Response();
+                    return;
+                }
+                if (c.MyStatus.Group == 0) {
+                    if (c.Status.UserStatus.Any(u => u.Group == 1) && c.Status.UserStatus.Any(u => u.Group == 2)) {
+                        c.Response(new ActionDesc(ActionType.AT_JOIN_GROUP) { User = c.Info.Index, Group = Random.Next() % 2 + 1 });
+                    } else {
+                        c.Response(new ActionDesc(ActionType.AT_SETUP_GROUP) { User = c.Info.Index });
+                    }
+                } else if (c.MyStatus.FlagShip) {
+                    if (c.Status.UserStatus.Any(u => u != c.MyStatus && u.Group == c.MyStatus.Group)) {
+                        c.Response(new ActionDesc(ActionType.AT_FIRE_MEMBER) {
+                            User = c.Info.Index,
+                            Users = new int[] { c.Status.UserStatus.First(u => u != c.MyStatus && u.Group == c.MyStatus.Group).Index }.ToList()
+                        });
+                    } else if (c.Status.UserStatus.Any(u => u.Group == 0)) {
+                        c.Response(new ActionDesc(ActionType.AT_INVITE_MEMBER) {
+                            User = c.Info.Index,
+                            Users = new int[] { c.Status.UserStatus.First(u => u.Group == 0).Index}.ToList()
+                        });
+                    } else {
+                        c.Response(new ActionDesc(ActionType.AT_CANCEL));
+                    }
+                } else {
+                    c.Response(new ActionDesc(ActionType.AT_CANCEL));
+                }                
+            });
+            RegisterHandler(ActionType.AT_ASK_VOTE, (c, a) => {
+                c.Response(new ActionDesc(ActionType.AT_VOTE) { Arg1 = Random.Next() % 2 + 1 });
             });
         }
     }

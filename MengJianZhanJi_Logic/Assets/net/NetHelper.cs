@@ -21,9 +21,12 @@ namespace Assets.net {
         public static Server Server { get; private set; }
         public static Client Client { get; private set; }
 
-        public static void SetUpServer() {
+        public static void SetUpServer(Action a=null) {
             if (Server != null) return;
-            Server = new Server(() => Join("127.0.0.1", "Host"));
+            Server = new Server(() => {
+                Join("127.0.0.1", "Host");
+                    a();
+            });
         }
 
         public static void Join(String ip, String name) {

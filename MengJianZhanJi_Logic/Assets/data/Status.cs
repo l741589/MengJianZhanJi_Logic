@@ -26,6 +26,7 @@ namespace Assets.data {
         }
 
         public static string ToString(int id) {
+            if (!G.Cards.ContainsKey(id)) return "[" + id.ToString() + "]";
             return G.Cards[id].ToString();
         }
     }
@@ -37,6 +38,9 @@ namespace Assets.data {
         public PrivateLinkedList<int> Stack;
         public LinkedList<int> Roles;
 
+        [ProtoMember(5)]
+        public bool Night;
+
         [ProtoMember(2)]
         public UserStatus[] UserStatus;
 
@@ -47,7 +51,13 @@ namespace Assets.data {
         [ProtoMember(4)]
         public RoundStage Stage;
 
-        
+        public int AliveUserCount {
+            get {
+                int c = 0;
+                foreach (var e in UserStatus) if (!e.IsDead) ++c;
+                return c;
+            }
+        }
 
         public Status Clone(int hide = -1) {
             Status us = (this as ICloneable).Clone() as Status;

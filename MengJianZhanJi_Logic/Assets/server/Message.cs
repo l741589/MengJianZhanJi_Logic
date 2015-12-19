@@ -50,10 +50,14 @@ namespace Assets.server {
         public data.ResponseHeader ResponseHeader;
         public object[] ResponseBody;
         public ResponseHandler Handler;
+        public Predicate<MessageContext> SuccessCondition;
         private static MessageCache Cache = new MessageCache();
+
         public MessageContext() {
 
         }
+
+        public bool IsSuccess { get { return SuccessCondition == null || SuccessCondition(this); } }
 
         public MessageContext(ClientHandler client, data.ActionDesc a) {
             this.Client = client;

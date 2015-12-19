@@ -26,6 +26,20 @@ namespace MengJianZhanJi_Logic {
             Loom.Window = this;
             Debug.W = this;
             LogUtils.Impl = this;
+            Loaded += MainWindow_Loaded;
+        }
+
+        void MainWindow_Loaded(object sender, RoutedEventArgs e) {
+            if (App.IsClient) {
+                NetUtils.Join("127.0.0.1", App.UserName);
+            } else {
+                NetUtils.SetUpServer(() => {
+                    for (int i = 0; i < 3; ++i) {
+                        System.Diagnostics.Process.Start(AppDomain.CurrentDomain.BaseDirectory + "MengJianZhanJi_Logic.exe", "Client" + i);
+                    }
+                });
+                Topmost = true;
+            }
         }
         
         private void Button_Click(object sender, RoutedEventArgs e) {
@@ -42,6 +56,7 @@ namespace MengJianZhanJi_Logic {
 
         private void Button_Click_3(object sender, RoutedEventArgs e) {
             NetUtils.Server.Start();
+            Topmost = false;
         }
 
         public void LogServer(string s) {

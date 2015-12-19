@@ -37,9 +37,9 @@ namespace Assets.server {
             ToDepth = toDepth;
         }
 
-        
 
-        public override State Run() {
+
+        public override object Run() {
             throw new NotImplementedException();
         }
     }
@@ -58,7 +58,7 @@ namespace Assets.server {
         public bool IsClosed { get; private set; }
         public State CurrentSub { get; private set;}
 
-        public abstract State Run();
+        public abstract object Run();
 
         public State():this(null) {}
 
@@ -69,22 +69,28 @@ namespace Assets.server {
         }
 
         public State Next() {
-            Thread.Sleep(1000);
+            Thread.Sleep(500);
             String stateName = GetType().Name;
             LogUtils.LogServer(">>>"+this);
-            State ret = Run();
+            object result = Run();
+            State next = null;
+            if (result is State) {
+                next = result as State;
+            } else if (result != null) {
+                Result = result;
+            }
             LogUtils.LogServer("<<<" + this);
             if (IsClosed) return null;
             if (ParentState != null) {
                 if (Depth <= ParentState.ToDepth) {
-                    ret = ParentState.State;
+                    next = ParentState.State;
                 } else {
-                    ret = ParentState;
+                    next = ParentState;
                 }
             }
-            if (ret!=null) ret.Init(this);
-            return ret;
-        }
+            if (next != null) next.Init(this);
+            return next;
+        }             
 
         public State Init(State o) {
             env = o.env;
@@ -130,85 +136,6 @@ namespace Assets.server {
         public void Close() {
             if (CurrentSub != null) CurrentSub.Close();
             IsClosed = true;
-        }
-    }
-
-    public partial class State {
-
-        public void Mix<T>(ICollection<T> c) {
-            var list = new List<T>(c);
-            int n = list.Count() * 100;
-            int count = list.Count();
-            while (n-- > 0) {
-                int l = Random.Next(count);
-                var t = list[l];
-                list[l] = list[0];
-                list[0] = t;
-            }
-            c.Clear();
-            foreach (var e in list) c.Add(e);
-        }
-
-        public void Log(ClientHandler c, String fmt, params object[] args) {
-            LogUtils.LogServer(c.ToString() + String.Format(fmt, args));
-        }
-
-        public MessageContext[] BuildContexts(Func<ClientHandler, MessageContext> creator,ResponseHandler handler=null) {
-            int l = Clients.Length;
-            MessageContext[] cs = new MessageContext[l];
-            for (int i = 0; i < l; ++i) {
-                cs[i] = creator(Clients[i]);
-                if (handler != null) cs[i].Handler = handler;
-            }
-            return cs;
-        }
-
-        public void BatchRequest(Func<ClientHandler, MessageContext> creator, ResponseHandler handler = null) {
-            Server.Request(BuildContexts(creator,handler));
-        }
-
-        public void BatchRequestOne(Func<ClientHandler, MessageContext> creator, ResponseHandler handler = null) {
-            Server.RequestOne(BuildContexts(creator, handler));
-        }
-
-        public int[] DrawCard(UserStatus user,int count = 1) {
-            int[] ret = new int[count];
-            for (int i = 0; i < count; ++i) {
-                if (Status.Stack.IsEmpty()) Shuffle();
-                ret[i] = Status.Stack.List.First();
-                Status.Stack.List.RemoveFirst();
-            }
-            user.Cards.AddRange(ret);
-            return ret;
-        }
-
-        public void Shuffle() {
-            Status.Stack.Clear();
-            foreach (var i in G.Cards.Keys) Status.Stack.List.AddLast(i);
-            Mix(Status.Stack.List);
-            String s = IOUtils.ReadStringFromFile("Cheat.txt");
-            if (s == null) return;
-            LogUtils.LogServer("出千中");
-            String[] ss = s.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var i in ss) {
-                int x;
-                if (int.TryParse(i,out x)){
-                    if (Status.Stack.List.Remove(x))
-                        Status.Stack.List.AddFirst(x);
-                }
-            }
-        }
-
-        public void SyncStatus() {
-            BatchRequest(client => new MessageContext(client, Types.SyncStatus, Status.Clone(client.ClientInfo.Index)));
-        }
-
-        public void Broadcast(Types type,params object[] body) {
-            Server.Broadcast(Clients, type, body);
-        }
-
-        public void Broadcast(ActionDesc body) {
-            Server.Broadcast(Clients, Types.Action, body);
         }
     }
 }

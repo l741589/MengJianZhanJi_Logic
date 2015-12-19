@@ -17,14 +17,14 @@ namespace Assets.server {
     public class MainState : State {
         public MainState(StateEnvironment env) : base(env) { }
 
-        public override State Run() {
+        public override object Run() {
             RunSub(new GameStartState());
             return null;
         }
     }
 
     public class GameStartState : State {
-        public override State Run() {
+        public override object Run() {
             for (int i = 0; i < Clients.Length; ++i) Clients[i].ClientInfo.Index = i;
             Status.Stack = new LinkedList<int>();
             Status.Roles = new LinkedList<int>();
@@ -47,29 +47,31 @@ namespace Assets.server {
     }
 
     public class PickRoleState : State {
-        public override State Run() {
+        public override object Run() {
             for (int i = 0x01000001; i <= 0x01000100; ++i) Status.Roles.AddLast(i);
             Mix(Status.Roles);
             BatchRequest(client => {
-                LinkedList<int> ss = new LinkedList<int>();
+                List<int> ss = new List<int>();
                 for (int i = 0; i < 5; ++i) {
-                    ss.AddLast(Status.Roles.First());
+                    ss.Add(Status.Roles.First());
                     Status.Roles.RemoveFirst();
                 }
-                return new MessageContext(client, T.PickRole, new data.ListAdapter<int>(ss)) {
-                    Handler = cx => {
-                        int role = cx.ResponseBody[0] as data.TypeAdapter<int>;
-                        Status.UserStatus[cx.Client.ClientInfo.Index].Role = role;
-                        Log(cx.Client, "picked role: {0}", role);
-                    }
-                };
+                return new MessageContext(client, new ActionDesc(ActionType.AT_ASK_PICK_CARD) {
+                    User = client.Index,
+                    Cards = ss
+                });
+            }, cx => {
+                var a = cx.GetRes<ActionDesc>();
+                Status.UserStatus[cx.Client.Index].Role = a.Card;
+                Broadcast(a);
+                Log(cx.Client, "picked role: {0}", a.Card);
             });
             return new DealState();
         }
     }
 
     public class DealState : State {
-        public override State Run() {
+        public override object Run() {
             BatchRequest(client => new MessageContext(client,
                 new data.ActionDesc {
                     ActionType = ActionType.AT_DRAW_CARD,
@@ -81,24 +83,10 @@ namespace Assets.server {
     }
 
     public class GameLoopState : State {
-        public override State Run() {
+        public override object Run() {
             Status.Turn = 0;
             RunSub(new PrepareState());
             return null;
-        }
-    }
-
-
-    public class MainLogic {
-
-        private Server server;
-
-        public MainLogic(Server server) {
-            this.server = server;
-        }
-
-        public void Start(ClientHandler[] clients) {
-            
         }
     }
 }

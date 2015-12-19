@@ -1,4 +1,5 @@
 ﻿using Assets.data;
+using Assets.utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,8 @@ namespace Assets.server {
         protected CardInfo Card;
         protected UserStatus Self;
         protected UserStatus Target;
-        protected ActionDesc A; 
+        protected ActionDesc A;
+        protected State Next;
         
         public UsingCardState() {
             
@@ -21,40 +23,47 @@ namespace Assets.server {
         }
 
         public UsingCardState Init(ActionDesc a) {
-            A = a;            
+            A = a;
+            LogUtils.Assert(A.IsSingleCard);
             return this;
         }
 
-        public override State Run() {
-            Id = A.Card;
-            Self = Status.UserStatus[A.User];
-            Card = G.Cards[Id];
-
+        public override object Run() {
+            Next = null;
+            if (A == null) A = new ActionDesc(ActionType.AT_USE_CARD);
+            Id = A.SingleCard;
+            Self = A.User == -1 ? null : Status.UserStatus[A.User];
+            Card = Id >= 0 ? G.Cards[Id] : null;
+            bool result = true;
             if (A.Users == null || A.Users.Count == 0) {
                 Target = Self;
-                Using();
+                result &= Using();
             } else {
                 foreach (var i in A.Users) {
                     Target = Status.UserStatus[i];
-                    Using();
+                    result &= Using();
                 }
             }
             EffectAfterAll();
-            return null;
+            Result = A.Clone();
+            (Result as ActionDesc).Success = result;
+            return Next;
         }
 
-        public virtual void Using(){
+        public virtual bool Using(){
             if (!IsValid()) {
                 Server.Request(CurrentClient, Types.Action, new ActionDesc {
                     ActionType = ActionType.AT_REFUSE,
                     Message = "非法的出牌: " + Card
                 });
-                return;
+                return false;
             }
-            Self.Cards.Remove(Id);
-            Broadcast(A);
-            if (IsCanceled()) return;
+            if (Id>=0&&Self!=null&&Self.Cards != null) Self.Cards.Remove(Id);
+            if (Id>=0) Broadcast(A);
+            
+            if (IsCanceled()) return false;
             Effect();
+            return true;
         }
             
         public virtual bool IsValid(){
@@ -94,6 +103,7 @@ namespace Assets.server {
             Register<UseJinJi>(CardFace.CF_JinJi);
             Register<UseXiuLi>(CardFace.CF_XiuLi);
             Register<UseUGuoHouQin>(CardFace.CF_UGuoHouQin);
+            Register<UseBanBenGengXin>(CardFace.CF_BanBenGengXin);
         }
         
     }
@@ -119,7 +129,7 @@ namespace Assets.server {
 
         public override bool IsCanceled() {
             var ca = RunSub(new AskForCardState(Target.Index, new List<int> { CardFace.CF_HuiBi })) as ActionDesc;
-            return ca == null || ca.Arg1 == 1;
+            return ca == null || ca.Success;
         }
 
         public override void Effect() {
@@ -138,7 +148,10 @@ namespace Assets.server {
     }
 
     class UseStrategy : UsingCardState {
-
+        public override bool IsCanceled() {
+            var result = RunSub(new AskForCardSyncAll(CardFace.CF_ZhanShuYuHui).Cancelable(s => IsCanceled())) as ActionDesc;
+            return result==null||result.Success;
+        }
     }
 
     class UseUGuoHouQin : UseStrategy{
@@ -149,6 +162,34 @@ namespace Assets.server {
                 User = Target.Index,
                 Cards = cards.Clone(cx.ClientInfo.Index != Target.Index)
             }));
+        }
+    }
+
+    class UseBanBenGengXin : UsingCardState {
+
+        class _UseBanBenGengXin : UseStrategy {
+
+            public List<int> cards;
+            public UserStatus user;
+
+            public override void Effect() {
+                ActionDesc a = RunSub(new PickCardState(user.Index, cards)) as ActionDesc;
+                if (a == null || a.Card < 0) {
+                    Next = this;
+                    return;
+                }
+                Result = a;
+                Status.UserStatus[user.Index].Cards.Add(a.Card);
+            }
+        }
+
+        public override void Effect() {
+            var cards=DrawCard(null, Status.AliveUserCount).ToList();
+            CircleCall(u => {
+                var a=RunSub(new _UseBanBenGengXin { cards = cards, user = u }) as ActionDesc;
+                cards.Remove(a.Card);
+                return false;
+            });
         }
     }
 }

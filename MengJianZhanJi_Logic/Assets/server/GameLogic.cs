@@ -18,7 +18,7 @@ namespace Assets.server {
             this.user = user;
         }
 
-        public override State Run() {
+        public override object Run() {
             ActionDesc a=RunSub(new AskForCardCircleAll(user,CardFace.CF_XiuLi)) as ActionDesc;
             if (a.ActionType == ActionType.AT_REFUSE) {
                 return new DeadState(user);
@@ -35,13 +35,16 @@ namespace Assets.server {
             this.user = user;
         }
 
-        public override State Run() {
-            Status.UserStatus[user].IsDead = true;
+        public override object Run() {
+            var us = Status.UserStatus[user];
+            us.State = UserStatus.UserState.DEAD;
+            GiveUpFlagShip(us);
+            us.Group = -1;
             Broadcast(new ActionDesc(ActionType.AT_DROP_CARD) {
                 User = user,
-                Cards = Status.UserStatus[user].Cards
+                Cards = us.Cards
             });
-            Status.UserStatus[user].Cards.Clear();
+            us.Cards.Clear();
             Broadcast(new ActionDesc(ActionType.AT_DEAD) { User = user });            
             int alive = -1;
             foreach (var u in Status.UserStatus) {
@@ -64,7 +67,7 @@ namespace Assets.server {
                 this.user = user;
             }
 
-            public override State Run() {
+            public override object Run() {
                 Broadcast(new ActionDesc(ActionType.AT_WIN) { Users = user });
                 return null;
             }
@@ -72,9 +75,6 @@ namespace Assets.server {
 
         public WinState(List<int> user) : base(new _WinState(user), 2) { }
     }
-
-
-    ////////////////////////////////////
 
     public class AlterHpState : State{
 
@@ -88,7 +88,7 @@ namespace Assets.server {
             this.maxHp = maxHp;
         }
 
-        public override State Run() {
+        public override object Run() {
             var u=Status.UserStatus[user];
             u.Hp+=hp;
             u.MaxHp += maxHp;
@@ -105,5 +105,42 @@ namespace Assets.server {
         }
     }
 
-    
+    public class PickCardState : State {
+
+        private PrivateList<int> cards;
+        private int user;
+        private bool hide;
+
+        public PickCardState(int user, List<int> cards, bool hideCards = false) {
+            this.user = user;
+            this.cards = cards;
+            hide = hideCards;
+        }
+
+        public override object Run() {
+            int card = -1;
+            Server.Request(new MessageContext(Clients[user], new ActionDesc(ActionType.AT_ASK_PICK_CARD) {
+                User = user,
+                Cards = cards.Clone(hide)
+            }) {
+                Handler = c => {
+                    var a = c.GetRes<ActionDesc>();
+                    if (c.Client.Index != user) return;
+                    card = a.Card;
+                }
+            });
+            if (!cards.Remove(card)){
+                Server.Request(Clients[user], T.Action, new ActionDesc(ActionType.AT_REFUSE) { Message = "无效的选择" });
+                return this;
+            }
+            var ret= new ActionDesc(ActionType.AT_PICK_CARD) {
+                User = user,
+                Card = card,
+            };
+            if (!hide) Broadcast(ret);
+            ret.Cards = cards;
+            Result = ret;
+            return null;
+        }
+    }
 }

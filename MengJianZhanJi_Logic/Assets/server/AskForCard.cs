@@ -7,9 +7,10 @@ using System.Text;
 using T = Assets.data.Types;
 namespace Assets.server {
     public class AskForCardState : State {
-        protected int user;
-        protected List<int> card;
-        protected ActionDesc askResult;
+        public int user;
+        public List<int> card;
+        public ActionDesc askResult;
+        private Predicate<AskForCardState> cancelCond;
 
         public AskForCardState(int user, params int[] card)
             : this(user, card.ToList()) {
@@ -21,8 +22,13 @@ namespace Assets.server {
             this.card = card;
         }
 
-        public override State Run() {
-            if (Status.UserStatus[user].IsDead) {
+        public AskForCardState Cancelable(Predicate<AskForCardState> cond) {
+            cancelCond = cond;
+            return this;
+        }
+
+        public override object Run() {
+            if (user >= 0 && Status.UserStatus[user].IsDead) {
                 Result = new ActionDesc {
                     ActionType = ActionType.AT_REFUSE,
                     Cards = new List<int>(),
@@ -41,7 +47,7 @@ namespace Assets.server {
                 return OnFail(copy);
             }
 
-            if (askResult.Cards == null) return OnFail(copy);
+            if (askResult.Cards == null || askResult.Cards.Count == 0) return OnFail(copy);
 
 
             foreach (var i in askResult.Cards.List) {
@@ -50,33 +56,47 @@ namespace Assets.server {
                 }
             }
             if (copy.Count > 0) return OnHalf(copy);
-            return OnSuccess(copy);
+            Apply();
+            if (cancelCond==null||!cancelCond(this)) return OnSuccess(copy);            
+            return OnCanceled(copy);
         }
 
-        public virtual State OnSuccess(List<int> copy){
-            askResult.Arg1 = 1;
+        public virtual void Apply() {
             foreach (var i in askResult.Cards.List) Status.UserStatus[askResult.User].Cards.Remove(i);
             Broadcast(askResult);
+        }
+
+        public virtual State OnSuccess(List<int> copy) {
+            askResult.Success = true;
+            askResult.Cards = copy;
+            Result = askResult;
+            return null;
+        }
+
+        public virtual State OnCanceled(List<int> copy) {
+            askResult.Success = false;
             askResult.Cards = copy;
             Result = askResult;
             return null;
         }
 
         public virtual State OnHalf(List<int> copy) {
-            foreach (var i in askResult.Cards.List) Status.UserStatus[askResult.User].Cards.Remove(i);
+            Apply();
             card = copy;
             askResult = null;
             return this;
         }
 
         public virtual State OnFail(List<int> copy){
-            askResult.Arg1 = 0;
+            askResult.Success = false;
             askResult.Cards = copy;
-            Server.Request(Clients[askResult.User], T.Action, new ActionDesc {
-                ActionType = ActionType.AT_REFUSE,
-                Cards = copy,
-                Message = "无效的出牌"
-            });
+            if (askResult.User != -1) {
+                Server.Request(Clients[askResult.User], T.Action, new ActionDesc {
+                    ActionType = ActionType.AT_REFUSE,
+                    Cards = copy,
+                    Message = "无效的出牌"
+                });
+            }
             Result = askResult;
             return null;
         }
@@ -97,23 +117,28 @@ namespace Assets.server {
 
     public class AskForCardSyncAll : AskForCardState {
 
-        public AskForCardSyncAll(int user, params int[] card)
-            : base(user, card) {
+        public AskForCardSyncAll(params int[] card)
+            : base(0, card) {
 
         }
 
-        public AskForCardSyncAll(int user, List<int> card)
-            : base(user, card) {
+        public AskForCardSyncAll(List<int> card)
+            : base(0, card) {
 
         }
 
         public override void DoRequest() {
             BatchRequestOne(c => new MessageContext(c, new ActionDesc(ActionType.AT_ASK_CARD) {
-                User = user,
+                User = c.Index,
                 Cards = card
-            }), c => {
-                if (c.ResponseHeader.Type != T.Action) return;
-                askResult = c.GetRes<ActionDesc>();
+            }), c => c.Type == T.Action && c.GetRes<ActionDesc>().ActionType == ActionType.AT_USE_CARD,
+            c => {
+                if (c == null) {
+                    askResult = new ActionDesc(ActionType.AT_CANCEL);
+                } else {
+                    if (c.ResponseHeader.Type != T.Action) return;
+                    askResult = c.GetRes<ActionDesc>();
+                }
             });
         }
 
@@ -134,17 +159,8 @@ namespace Assets.server {
             this.card = card;
         }
 
-        public override State Run() {
-            for (int i = from; i < Status.UserStatus.Length; ++i) {
-                if (Status.UserStatus[i].IsDead) continue;
-                if (AskUser(i)) break;
-            }
-            if (card != null && card.Count > 0) {
-                for (int i = 0; i < from; ++i) {
-                    if (Status.UserStatus[i].IsDead) continue;
-                    if (AskUser(i)) break;
-                }
-            }
+        public override object Run() {
+            CircleCall(u => AskUser(u.Index));
             if (card == null || card.Count == 0) {
                 Result = new ActionDesc(ActionType.AT_USE_CARD) { Cards = card };
             } else {
@@ -156,7 +172,7 @@ namespace Assets.server {
         private bool AskUser(int user) {
             ActionDesc a = RunSub(new AskForCardState(user, card)) as ActionDesc;
             card = a.Cards ?? new List<int>();
-            if (a.Arg1 == 1) return true;
+            if (a.Success) return true;
             return false;
         }
     }

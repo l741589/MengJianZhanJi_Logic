@@ -40,8 +40,13 @@ namespace Assets.data {
         }
     }
 
+    
+
     [ProtoContract]
     public class UserStatus : ICloneable {
+        [ProtoContract]
+        public enum UserState { NORMAL, HIDE, DEAD }
+
         [ProtoMember(1)]
         public int Role;
         [ProtoMember(2)]
@@ -53,7 +58,13 @@ namespace Assets.data {
         [ProtoMember(6)]
         public int MaxHp { get; set; }
         [ProtoMember(7, IsRequired = true)]
-        public bool IsDead = false;
+        public UserState State=UserState.NORMAL;
+        
+        [ProtoMember(8, IsRequired = true)]
+        public int Group = 0;
+        [ProtoMember(9, IsRequired = true)]
+        public bool FlagShip = false;
+
         [ProtoMember(101)]
         public PrivateList<int> Cards;
         [ProtoMember(103)]
@@ -72,6 +83,8 @@ namespace Assets.data {
         public object Clone() {
             return MemberwiseClone();
         }
+
+        public bool IsDead { get { return State == UserState.DEAD; } }
     }
 
    

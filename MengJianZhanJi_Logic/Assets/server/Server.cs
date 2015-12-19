@@ -89,26 +89,28 @@ namespace Assets.server {
             Request(cs);
         }
 
-        public void RequestOne(params MessageContext[] contexts) {
+        public void RequestOne(MessageContext[] contexts, ResponseHandler allFail) {
             foreach (var e in contexts) e.Send();
+            MessageContext theSucc = null;
             while (true) {
-                foreach (var e in contexts) 
-                    if (e.TryRecv()) goto SUCCESS;
+                bool allRecved = true;
+                foreach (var e in contexts) {
+                    if (!e.IsRecved) {
+                        allRecved = false;
+                        if (e.TryRecv() && e.IsSuccess) {
+                            theSucc = e;
+                            goto SUCCESS;
+                        }
+                    }
+                }
+                if (allRecved) break;
                 Thread.Sleep(100);
             }
-            SUCCESS:
-            foreach (var e in contexts) {
-                if (!e.IsRecved) 
-                    e.Trucate();
-                
-            }
-            foreach (var e in contexts) {
-                if (e.IsRecved) {
-                    e.Handle();
-                } else {
-                    e.Recv();
-                }
-            }
+        SUCCESS:
+            foreach (var e in contexts) if (!e.IsRecved) e.Trucate();
+            foreach (var e in contexts) if (!e.IsRecved) e.Recv();
+            if (theSucc != null) theSucc.Handle();
+            else if (allFail != null) allFail(null);
         }
 
         public void Request(params MessageContext[] contexts) {
