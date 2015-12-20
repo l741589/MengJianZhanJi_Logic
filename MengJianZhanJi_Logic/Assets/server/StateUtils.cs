@@ -94,16 +94,30 @@ namespace Assets.server {
             }
         }
 
-        public void CircleCall(Func<UserStatus, bool> a, int from = -1, int step = 1, bool skipDead = true) {
+        
+        /// <summary>
+        /// 对每个用户执行操作
+        /// </summary>
+        /// <param name=""></param>
+        /// <param name="a">操作，返回true表示提前结束</param>
+        /// <param name="group">分组：-2，所有用户；-1，当前用户；其他指定分组</param>
+        /// <param name="from">开始点：-1，当前用户；其他指定用户</param>
+        /// <param name="step">步长</param>
+        /// <param name="skipDead">是否跳过死亡用户</param>
+        /// <returns></returns>
+        public void CircleCall(Func<UserStatus, bool> a,int group = -2,int from = -1, int step = 1, bool skipDead = true) {
             int c = Status.UserStatus.Count();
             if (from == -1) from = Status.Turn;
+            if (group == -1) group = CurrentUser.Group;
             for (int i = from; i < c; i = i + step) {
                 var us = Status.UserStatus[i];
+                if (group >= 0 && group != us.Group) continue;
                 if (us.IsDead && skipDead) continue;
                 if (a(us)) return;
             }
             for (int i = 0; i < from; i = i + step) {
                 var us = Status.UserStatus[i];
+                if (group >= 0 && group != us.Group) continue;
                 if (us.IsDead && skipDead) continue;
                 if (a(us)) return;
             }

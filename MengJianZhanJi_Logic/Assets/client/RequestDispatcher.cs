@@ -123,7 +123,8 @@ namespace Assets.client {
                                 var ad = new ActionDesc {
                                     ActionType = ActionType.AT_USE_CARD,
                                     User = c.Info.Index,
-                                    Card = e
+                                    Card = e,
+                                    Group= c.MyStatus.Group
                                 };
                                 c.Response(ad);
                                 return;

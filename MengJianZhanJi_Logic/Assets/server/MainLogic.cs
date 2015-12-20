@@ -85,7 +85,7 @@ namespace Assets.server {
     public class GameLoopState : State {
         public override object Run() {
             Status.Turn = 0;
-            RunSub(new PrepareState());
+            RunSub(new RelationState());
             return null;
         }
     }

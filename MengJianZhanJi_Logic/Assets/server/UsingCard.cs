@@ -28,7 +28,12 @@ namespace Assets.server {
             return this;
         }
 
+        public virtual ActionDesc PreRun(ActionDesc a) {
+            return a;
+        }
+
         public override object Run() {
+            A = PreRun(A);
             Next = null;
             if (A == null) A = new ActionDesc(ActionType.AT_USE_CARD);
             Id = A.SingleCard;
@@ -103,9 +108,8 @@ namespace Assets.server {
             Register<UseJinJi>(CardFace.CF_JinJi);
             Register<UseXiuLi>(CardFace.CF_XiuLi);
             Register<UseUGuoHouQin>(CardFace.CF_UGuoHouQin);
-            Register<UseBanBenGengXin>(CardFace.CF_BanBenGengXin);
-        }
-        
+            //Register<UseBanBenGengXin>(CardFace.CF_BanBenGengXin);
+        }        
     }
 
     class UseJinJi : UsingCardState {
@@ -149,19 +153,34 @@ namespace Assets.server {
 
     class UseStrategy : UsingCardState {
         public override bool IsCanceled() {
-            var result = RunSub(new AskForCardSyncAll(CardFace.CF_ZhanShuYuHui).Cancelable(s => IsCanceled())) as ActionDesc;
+            var result = RunSub(new AskForCardState(Target.Index, CardFace.CF_ZhanShuYuHui)) as ActionDesc;
+            //var result = RunSub(new AskForCardSyncAll(CardFace.CF_ZhanShuYuHui).Cancelable(s => IsCanceled())) as ActionDesc;
             return result==null||result.Success;
         }
     }
 
     class UseUGuoHouQin : UseStrategy{
+
+        public override ActionDesc PreRun(ActionDesc a) {
+            if (a.Group > 0) a.Users = GroupUsersIndex(a.Group);
+            else a.Users = null;
+            return a;
+        }
+
         public override void Effect() {
-            PrivateList<int> cards = DrawCard(Target, 2).ToList();
-            BatchRequest(cx => new server.MessageContext(cx, new ActionDesc {
-                ActionType = ActionType.AT_DRAW_CARD,
-                User = Target.Index,
-                Cards = cards.Clone(cx.ClientInfo.Index != Target.Index)
-            }));
+            PrivateList<int> cards =null;
+            if (A.Group == 0) {
+                cards= DrawCard(Target, 2).ToList();
+            } else {
+                cards=DrawCard(Target, 1).ToList();
+            }
+            if (cards != null) {
+                BatchRequest(cx => new server.MessageContext(cx, new ActionDesc {
+                    ActionType = ActionType.AT_DRAW_CARD,
+                    User = Target.Index,
+                    Cards = cards.Clone(cx.ClientInfo.Index != Target.Index)
+                }));
+            }
         }
     }
 
@@ -186,7 +205,7 @@ namespace Assets.server {
         public override void Effect() {
             var cards=DrawCard(null, Status.AliveUserCount).ToList();
             CircleCall(u => {
-                var a=RunSub(new _UseBanBenGengXin { cards = cards, user = u }) as ActionDesc;
+                var a=RunSub(new _UseBanBenGengXin { cards = cards, user = u }.Init(A)) as ActionDesc;
                 cards.Remove(a.Card);
                 return false;
             });

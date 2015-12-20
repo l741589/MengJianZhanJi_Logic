@@ -19,8 +19,8 @@ namespace Assets.utility {
             IsDebug = false;
         }
 
-        private void Log(string s) {
-            if (IsDebug) {
+        private void Log(string s,bool force=false) {
+            if (IsDebug||force) {
                 String l = Thread.Name+": "+s;
                 if (Thread != Thread.CurrentThread) {
                     l = Thread.CurrentThread.Name + " => " + l;
@@ -62,7 +62,7 @@ namespace Assets.utility {
                     try {
                         a();
                     }catch(Exception e) {
-                        Log(e.Message+"\n"+e.StackTrace);
+                        Log(e.Message+"\n"+e.StackTrace,true);
                     }
                 }
             }

@@ -1,22 +1,36 @@
 ﻿using Assets.data;
 using Assets.utility;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using T = Assets.data.Types;
 namespace Assets.server {
     public abstract class StageState : State {
 
+        public virtual String GetName(){
+            return GetType().Name;
+        }
+
         public void ChangeStage(RoundStage stage) {
             Status.Stage = stage;
             Server.Broadcast(Clients, T.ChangeStage, new StageChangeInfo { Turn = Status.Turn, Stage = Status.Stage });
+        }
+
+        public bool JumpStage() {
+            var a = RunSub(new AskForCardState(Status.Turn, CardFace.CF_ZhanShuYuHui)) as ActionDesc;
+            if (a.Success) {
+                BroadcastMessage(string.Format("{0} 跳过了 {1}阶段", Clients[Status.Turn], GetName()));
+            }
+            return a.Success;
         }
     }
 
     public class PrepareState : StageState {
         public override object Run() {
+            if (JumpStage()) return new DrawCardState();
             ChangeStage(RoundStage.RS_PREPARE);
             SyncStatus();
-            return new JudgeState();
+            return new DrawCardState();
         }
     }
 
@@ -29,13 +43,14 @@ namespace Assets.server {
 
     public class RelationState : StageState {
         public override object Run() {
+            //if (JumpStage()) return new DrawCardState();
             ChangeStage(RoundStage.RS_RELATION);
             SyncStatus();
             ActionDesc a = new ActionDesc(ActionType.AT_ASK_RELATION) { User = Status.Turn };
             var c = PublicRequest(a);
             var ra = c.GetRes<ActionDesc>();
             Broadcast(ra);
-            if (Do(ra)) return new DrawCardState();
+            if (Do(ra)) return new PrepareState();
             return new RelationState();
         }
 
@@ -131,6 +146,7 @@ namespace Assets.server {
 
     public class DrawCardState : StageState {
         public override object Run() {
+            if (JumpStage()) return new DrawCardState();
             ChangeStage(RoundStage.RS_DRAW);
             PrivateList<int> cards = DrawCard(CurrentUser, 2).ToList();
             BatchRequest(c => new server.MessageContext(c, new ActionDesc {
@@ -152,6 +168,7 @@ namespace Assets.server {
         }
 
         public override object Run() {
+            if (JumpStage()) return new DrawCardState();
             ChangeStage(RoundStage.RS_MAIN);
             SyncStatus();
             var c = Server.Request(CurrentClient, T.Action, new ActionDesc(ActionType.AT_ASK) {
@@ -171,6 +188,7 @@ namespace Assets.server {
 
     public class DropCardState : StageState {
         public override object Run() {
+            if (JumpStage()) return new DrawCardState();
             ChangeStage(RoundStage.RS_DROP);
             SyncStatus();
             var c = Server.Request(CurrentClient, T.Action, new ActionDesc(ActionType.AT_ASK_DROP_CARD) { User = Status.Turn });
@@ -188,11 +206,12 @@ namespace Assets.server {
 
     public class RoundFinishState : StageState {
         public override object Run() {
+            if (JumpStage()) return new DrawCardState();
             ChangeStage(RoundStage.RS_FINISH);
             do {
                 ++Status.Turn;
             } while (CurrentUser.IsDead);
-            return new PrepareState();
+            return new RelationState();
         }
     }
 

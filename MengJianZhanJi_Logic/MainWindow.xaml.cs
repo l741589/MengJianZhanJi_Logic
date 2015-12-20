@@ -29,13 +29,16 @@ namespace MengJianZhanJi_Logic {
             Loaded += MainWindow_Loaded;
         }
 
+        private List<System.Diagnostics.Process> clientProcesses = new List<System.Diagnostics.Process>();
+
         void MainWindow_Loaded(object sender, RoutedEventArgs e) {
             if (App.IsClient) {
                 NetUtils.Join("127.0.0.1", App.UserName);
             } else {
                 NetUtils.SetUpServer(() => {
                     for (int i = 0; i < 3; ++i) {
-                        System.Diagnostics.Process.Start(AppDomain.CurrentDomain.BaseDirectory + "MengJianZhanJi_Logic.exe", "Client" + i);
+                        var p=System.Diagnostics.Process.Start(AppDomain.CurrentDomain.BaseDirectory + "MengJianZhanJi_Logic.exe", "Client" + i);
+                        clientProcesses.Add(p);
                     }
                 });
                 Topmost = true;
@@ -97,8 +100,11 @@ namespace MengJianZhanJi_Logic {
 
         protected override void OnClosed(EventArgs e) {
             NetUtils.Shutdown();
-            Thread.Sleep(5000);
-            base.OnClosed(e);            
+            //Thread.Sleep(5000);
+            base.OnClosed(e);
+            foreach (var p in clientProcesses) {
+                p.Kill();
+            }
         }
     }
 }
