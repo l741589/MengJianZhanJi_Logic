@@ -52,6 +52,19 @@ namespace Assets.client {
             });
         }
 
+        public static UserStatus RandomUser(MessageContext c) {
+            return RandomUser(c.Status, c.Info.Index);
+        }
+
+        public static UserStatus RandomUser(Status Status,int except= -1) {
+            while (true) {
+                int i=Random.Next(Status.UserStatus.Count());
+                if (i == except) continue;
+                if (Status.UserStatus[i].IsDead) continue;
+                return Status.UserStatus[i];
+            }
+        }
+
         public static void Mock() {
             
            
@@ -106,13 +119,11 @@ namespace Assets.client {
                             }
                             break;
                         case CardFace.CF_JinJi: {
-                                var user = cl.Status.Turn;
-                                while (user == cl.Status.Turn || cl.Status.UserStatus[user].IsDead)
-                                    user = (user + 1) % cl.Status.UserStatus.Length;
+                                var user = RandomUser(c.Status, c.Info.Index);
                                 var ad = new ActionDesc {
                                     ActionType = ActionType.AT_USE_CARD,
                                     User = cl.Info.Index,
-                                    Users = new int[] { user }.ToList(),
+                                    Users = new int[] { user.Index }.ToList(),
                                     Card = e
                                 };
                                 c.Response(ad);
@@ -124,7 +135,20 @@ namespace Assets.client {
                                     ActionType = ActionType.AT_USE_CARD,
                                     User = c.Info.Index,
                                     Card = e,
-                                    Group= c.MyStatus.Group
+                                    Group = c.MyStatus.Group
+                                };
+                                c.Response(ad);
+                                return;
+                            }
+
+                        case CardFace.CF_HuHuHu: {
+                                var user = RandomUser(c);
+                                var ad = new ActionDesc {
+                                    ActionType = ActionType.AT_USE_CARD,
+                                    User = c.Info.Index,
+                                    Card = e,
+                                    Users = new int[] { user.Index }.ToList(),
+                                    Group = user.Group
                                 };
                                 c.Response(ad);
                                 return;
@@ -176,7 +200,7 @@ namespace Assets.client {
                 var cl = c.Client;
                 c.Response(new ActionDesc(ActionType.AT_DROP_CARD) {
                     User = cl.Info.Index,
-                    Cards = cl.MyStatus.Cards.List.Skip(cl.MyStatus.Hp).ToList()
+                    Cards = cl.MyStatus.Cards.List.Take(a.Arg1).ToList()
                 });
             });
             RegisterHandler(ActionType.AT_DROP_CARD, (c, a) => {

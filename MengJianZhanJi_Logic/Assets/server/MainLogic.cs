@@ -36,7 +36,7 @@ namespace Assets.server {
                     Hp = 3,
                     MaxHp = 4,
                     Cards = new List<int>(),
-                    Equip = new List<int>(),
+                    Equip = new EquipmentDock(),
                     Buff = new List<int>()
                 };
             }
@@ -72,12 +72,7 @@ namespace Assets.server {
 
     public class DealState : State {
         public override object Run() {
-            BatchRequest(client => new MessageContext(client,
-                new data.ActionDesc {
-                    ActionType = ActionType.AT_DRAW_CARD,
-                    User = client.Index,
-                    Cards = DrawCard(Status.UserStatus[client.Index], 4).ToList()
-                }));
+            foreach (var e in Status.UserStatus) DrawCard(e, 4);
             return new GameLoopState();
         }
     }

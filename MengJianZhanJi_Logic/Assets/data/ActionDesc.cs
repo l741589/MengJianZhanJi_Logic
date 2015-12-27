@@ -10,6 +10,7 @@ using System.Text;
 namespace Assets.data {
     [ProtoContract]
     public enum ActionType {
+        AT_UNKNOWN,
         AT_CANCEL,
         AT_MESSAGE,
         AT_DRAW_CARD,
@@ -34,7 +35,16 @@ namespace Assets.data {
 
         //投票子集
         AT_ASK_VOTE,
-        AT_VOTE
+        AT_VOTE,
+
+        //选数字子集
+        AT_ASK_NUMBER,
+        AT_NUMBER,
+
+        //杂项
+        AT_ROLL,
+
+        
     }
 
     [ProtoContract]
@@ -112,6 +122,9 @@ namespace Assets.data {
             case ActionType.AT_MESSAGE: return Message;
             case ActionType.AT_ASK_VOTE: return "请" + UsersToString() + "判断:" + Message;
             case ActionType.AT_VOTE: return UsersToString() + "判断结果:" + (Arg1 == 1 ? "是" : "否");
+            case ActionType.AT_ROLL:return UserToString() +" Roll 出了 "+ Arg1;
+            case ActionType.AT_ASK_NUMBER: return "请" + UserToString() + "决定数字[" + Arg1 + "-" + Arg2 + "]:" + Message;
+            case ActionType.AT_NUMBER: return UserToString() + "选择了数字 " + Arg1;
             default: return "还没有写描述: " + ActionType;
             }
         }
@@ -142,6 +155,10 @@ namespace Assets.data {
 
         object ICloneable.Clone() {
             return MemberwiseClone();
+        }
+
+        public static implicit operator bool(ActionDesc a) {
+            return a != null && a.Success;
         }
     }
 

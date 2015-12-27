@@ -102,16 +102,10 @@ namespace Assets.server {
         }
 
         public virtual void DoRequest(){
-            var action = new ActionDesc(ActionType.AT_ASK_CARD) {
+            askResult = PublicRequest(new ActionDesc(ActionType.AT_ASK_CARD) {
                 User = user,
                 Cards = card,
-            };
-            BatchRequest(c => new MessageContext(c, action), cx => {
-                if (cx.Client.Index == user) {
-                    askResult = cx.GetRes<ActionDesc>(0);
-                    LogUtils.Assert(askResult != null);
-                }
-            });
+            }).GetRes<ActionDesc>();
         }
     }
 
@@ -170,10 +164,18 @@ namespace Assets.server {
         }
 
         private bool AskUser(int user) {
-            ActionDesc a = RunSub(new AskForCardState(user, card)) as ActionDesc;
+            ActionDesc a = AskForCard(user, card.ToArray());
             card = a.Cards ?? new List<int>();
             if (a.Success) return true;
             return false;
+        }
+    }
+
+    public partial class State {
+        public ActionDesc AskForCard(int user,params int[] card) {
+            ActionDesc a = RunSub(new AskForCardState(user, card)) as ActionDesc;
+            if (a == null) return new ActionDesc(ActionType.AT_UNKNOWN) { Success = false };
+            return a;
         }
     }
 }

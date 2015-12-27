@@ -66,16 +66,7 @@ namespace Assets.server {
             Server.RequestOne(BuildContexts(creator, handler, successCondtion), handler);
         }
 
-        public int[] DrawCard(UserStatus user, int count = 1) {
-            int[] ret = new int[count];
-            for (int i = 0; i < count; ++i) {
-                if (Status.Stack.IsEmpty()) Shuffle();
-                ret[i] = Status.Stack.List.First();
-                Status.Stack.List.RemoveFirst();
-            }
-            if (user != null) user.Cards.AddRange(ret);
-            return ret;
-        }
+        
 
         public void Shuffle() {
             Status.Stack.Clear();

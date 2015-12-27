@@ -17,11 +17,12 @@ namespace Assets.server {
         }
 
         public bool JumpStage() {
-            var a = RunSub(new AskForCardState(Status.Turn, CardFace.CF_ZhanShuYuHui)) as ActionDesc;
-            if (a.Success) {
+            //var a = RunSub(new AskForCardState(Status.Turn, CardFace.CF_ZhanShuYuHui)) as ActionDesc;
+            var a=AskForCard(Status.Turn,CardFace.CF_ZhanShuYuHui);
+            if (a) {
                 BroadcastMessage(string.Format("{0} 跳过了 {1}阶段", Clients[Status.Turn], GetName()));
             }
-            return a.Success;
+            return a;
         }
     }
 
@@ -148,16 +149,10 @@ namespace Assets.server {
         public override object Run() {
             if (JumpStage()) return new DrawCardState();
             ChangeStage(RoundStage.RS_DRAW);
-            PrivateList<int> cards = DrawCard(CurrentUser, 2).ToList();
-            BatchRequest(c => new server.MessageContext(c, new ActionDesc {
-                ActionType = ActionType.AT_DRAW_CARD,
-                User = Status.Turn,
-                Cards = cards.Clone(c.ClientInfo.Index != Status.Turn)
-            }));
+            DrawCard(CurrentUser, 2, false);
             return new UseCardState();
         }
     }
-
 
     public class UseCardState : StageState {
 
@@ -190,18 +185,10 @@ namespace Assets.server {
         public override object Run() {
             if (JumpStage()) return new DrawCardState();
             ChangeStage(RoundStage.RS_DROP);
-            SyncStatus();
-            var c = Server.Request(CurrentClient, T.Action, new ActionDesc(ActionType.AT_ASK_DROP_CARD) { User = Status.Turn });
-            var a = c.GetRes<ActionDesc>(0);
-            if (a.Cards != null) {
-                var u = Status.UserStatus[a.User];
-                foreach (var i in a.Cards.List) {
-                    u.Cards.List.Remove(i);
-                }
-            }
-            Broadcast(a);
+            AskWithDropCard(CurrentUser);
             return new RoundFinishState();
         }
+
     }
 
     public class RoundFinishState : StageState {

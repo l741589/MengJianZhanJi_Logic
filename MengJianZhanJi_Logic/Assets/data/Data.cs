@@ -40,7 +40,22 @@ namespace Assets.data {
         }
     }
 
-    
+    [ProtoContract]
+    public class EquipmentDock {
+        [ProtoMember(1, IsRequired = true)]
+        public int AntiAir = 0;
+        [ProtoMember(2, IsRequired = true)]
+        public int Aircraft = 0;
+        [ProtoMember(3, IsRequired = true)]
+        public int Radar = 0;
+        [ProtoMember(4, IsRequired = true)]
+        public int Strenthen = 0;
+
+        public bool IsEmpty() {
+            return AntiAir == 0 && Aircraft == 0 && Radar == 0 && Strenthen == 0;
+        }
+    }
+
 
     [ProtoContract]
     public class UserStatus : ICloneable {
@@ -58,8 +73,8 @@ namespace Assets.data {
         [ProtoMember(6)]
         public int MaxHp { get; set; }
         [ProtoMember(7, IsRequired = true)]
-        public UserState State=UserState.NORMAL;
-        
+        public UserState State = UserState.NORMAL;
+
         [ProtoMember(8, IsRequired = true)]
         public int Group = 0;
         [ProtoMember(9, IsRequired = true)]
@@ -67,12 +82,12 @@ namespace Assets.data {
 
         [ProtoMember(101)]
         public PrivateList<int> Cards;
-        [ProtoMember(103)]
-        public List<int> Equip;
+        [ProtoMember(103, IsRequired = true)]
+        public EquipmentDock Equip = new EquipmentDock();
         [ProtoMember(104)]
         public List<int> Buff;
-        
-        public UserStatus() {}
+
+        public UserStatus() { }
 
         public UserStatus Clone(bool hidePrivate) {
             UserStatus us = Clone() as UserStatus;
@@ -121,6 +136,13 @@ namespace Assets.data {
         RS_DROP =5,
         [ProtoEnum]
         RS_FINISH =6,
+    }
+
+    [ProtoContract]
+    public enum DamageType {
+        NORMAL = 0,
+        AIR = 1,
+        TORPEDO = 2
     }
 
     [ProtoContract]

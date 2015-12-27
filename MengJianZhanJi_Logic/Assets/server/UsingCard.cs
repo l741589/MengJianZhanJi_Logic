@@ -108,6 +108,7 @@ namespace Assets.server {
             Register<UseJinJi>(CardFace.CF_JinJi);
             Register<UseXiuLi>(CardFace.CF_XiuLi);
             Register<UseUGuoHouQin>(CardFace.CF_UGuoHouQin);
+            Register<UseHuHuHu>(CardFace.CF_HuHuHu);
             //Register<UseBanBenGengXin>(CardFace.CF_BanBenGengXin);
         }        
     }
@@ -137,7 +138,7 @@ namespace Assets.server {
         }
 
         public override void Effect() {
-            RunSub(new AlterHpState(Target.Index, -1));
+            AlterHp(Target.Index, -1);
         }
 
         public override void EffectAfterAll() {
@@ -147,15 +148,13 @@ namespace Assets.server {
 
     class UseXiuLi : UsingCardState {
         public override void Effect() {
-            RunSub(new AlterHpState(Target.Index, 1));
+            AlterHp(Target.Index, 1);
         }
     }
 
     class UseStrategy : UsingCardState {
         public override bool IsCanceled() {
-            var result = RunSub(new AskForCardState(Target.Index, CardFace.CF_ZhanShuYuHui)) as ActionDesc;
-            //var result = RunSub(new AskForCardSyncAll(CardFace.CF_ZhanShuYuHui).Cancelable(s => IsCanceled())) as ActionDesc;
-            return result==null||result.Success;
+            return AskForCard(Target.Index, CardFace.CF_ZhanShuYuHui);
         }
     }
 
@@ -170,16 +169,9 @@ namespace Assets.server {
         public override void Effect() {
             PrivateList<int> cards =null;
             if (A.Group == 0) {
-                cards= DrawCard(Target, 2).ToList();
+                DrawCard(Target, 2).ToList();
             } else {
-                cards=DrawCard(Target, 1).ToList();
-            }
-            if (cards != null) {
-                BatchRequest(cx => new server.MessageContext(cx, new ActionDesc {
-                    ActionType = ActionType.AT_DRAW_CARD,
-                    User = Target.Index,
-                    Cards = cards.Clone(cx.ClientInfo.Index != Target.Index)
-                }));
+                DrawCard(Target, 1).ToList();
             }
         }
     }
@@ -203,12 +195,72 @@ namespace Assets.server {
         }
 
         public override void Effect() {
-            var cards=DrawCard(null, Status.AliveUserCount).ToList();
+            /*var cards=DrawCard(null, Status.AliveUserCount).ToList();
             CircleCall(u => {
                 var a=RunSub(new _UseBanBenGengXin { cards = cards, user = u }.Init(A)) as ActionDesc;
                 cards.Remove(a.Card);
                 return false;
+            });*/
+        }
+    }
+
+    class UseHuHuHu : UseStrategy {
+        public override ActionDesc PreRun(ActionDesc a) {
+            if (a.Group > 0) a.Users = GroupUsersIndex(a.Group);
+            return a;
+        }
+
+        private int x = -1;
+
+        public override void Effect() {
+            if (x==-1) x = Roll(Self.Index);
+            int y = Roll(Target.Index);
+            if (y < x) {
+                int delta = -1;
+                if (Target.Equip.AntiAir > 0) delta = -2;
+                AlterHp(Target.Index, delta, DamageType.AIR);
+            }
+        }
+    }
+
+    class UseYiHaoZuoZhan : UseStrategy {
+        public override void Effect() {
+            int n=AskForNumber(Target.Index, 1, 3);
+            DrawCard(Target, n);
+            AlterHp(Target.Index, -n, DamageType.TORPEDO);
+            AlterHp(Self.Index, -1);
+        }
+    }
+
+    class UseBanBenGenXin : UseStrategy {
+        public override void Effect() {
+            CircleCall(u => {
+                if (u.Equip.IsEmpty()) {
+                    AskWithDropCard(u, 1);
+                } else {
+                    DrawCard(u, 1);
+                }
+                return false;
             });
+        }
+    }
+
+    class UseShenHaiWeiYa : UseStrategy {
+        public override void Effect() {
+            if (Self.Group == 0) {
+                CircleCall(u => {
+                    if (u.Index == Self.Index) return false;
+                    AlterHp(u.Index, -1);
+                    return false;
+                });
+            } else {
+                CircleCall(u => {
+                    if (u.Group == Self.Group) return false;
+                    if (u.Index == 0) AlterHp(u.Index, -1);
+                    else AskWithDropCard(u, 1);
+                    return false;
+                });
+            }
         }
     }
 }
